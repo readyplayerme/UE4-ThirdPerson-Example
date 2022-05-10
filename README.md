@@ -54,7 +54,18 @@ This will bring up the Select Skeleton window, in here simply select the `RPM_Mi
 
 Once the process is complete you should end up with animations and/or animation blueprints that work with our Ready Player Me avatar.
 
+## Dependencies
+- Ready Player Me Unreal SDK 
+- glTFRuntime (Third party plugin)
 
+## Links
+**Ready Player Me Unreal SDK**
+- [Documentation](https://link-url-here.org)
+- [Download](https://docs.readyplayer.me/ready-player-me/integration-guides/unreal-engine-4/unreal-plugin-download)
+- [Support](mailto:support@wolf3d.io)
+
+**glTFRuntime**
+- [Documentation](https://github.com/rdeioris/glTFRuntime-docs/blob/master/README.md)
 
 
 
