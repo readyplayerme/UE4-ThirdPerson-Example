@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.16.0] 2022-05-05
+
+## Fixed
+
+- UE5 android (Quest) build issues caused by glTFRuntime
+
+## Changed
+
+- updated to latest version of glTFRuntime
+
 ## [0.15.1] 2022-04-12
 
 ## Fixed
