@@ -242,6 +242,8 @@ enum class EglTFRuntimeMaterialType : uint8
 	Translucent,
 	TwoSided,
 	TwoSidedTranslucent,
+	Masked,
+	TwoSidedMasked
 };
 
 UENUM()
@@ -438,6 +440,9 @@ struct FglTFRuntimeStaticMeshConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
 	bool bReverseTangents;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
+	bool bUseHighPrecisionUVs;
+
 	FglTFRuntimeStaticMeshConfig()
 	{
 		CacheMode = EglTFRuntimeCacheMode::ReadWrite;
@@ -450,6 +455,7 @@ struct FglTFRuntimeStaticMeshConfig
 		NormalsGenerationStrategy = EglTFRuntimeNormalsGenerationStrategy::IfMissing;
 		TangentsGenerationStrategy = EglTFRuntimeTangentsGenerationStrategy::IfMissing;
 		bReverseTangents = false;
+		bUseHighPrecisionUVs = false;
 	}
 };
 
@@ -653,6 +659,9 @@ struct FglTFRuntimeSkeletalMeshConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
 	FVector ShiftBounds;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
+	bool bUseHighPrecisionUVs;
+
 	FglTFRuntimeSkeletalMeshConfig()
 	{
 		CacheMode = EglTFRuntimeCacheMode::ReadWrite;
@@ -670,6 +679,7 @@ struct FglTFRuntimeSkeletalMeshConfig
 		bIgnoreEmptyMorphTargets = true;
 		MorphTargetsDuplicateStrategy = EglTFRuntimeMorphTargetsDuplicateStrategy::Ignore;
 		ShiftBounds = FVector::ZeroVector;
+		bUseHighPrecisionUVs = false;
 	}
 };
 
@@ -889,6 +899,22 @@ struct FglTFRuntimeMipMap
 	}
 };
 
+struct FglTFRuntimeTextureTransform
+{
+	FLinearColor Offset;
+	float Rotation;
+	FLinearColor Scale;
+	int32 TexCoord;
+
+	FglTFRuntimeTextureTransform()
+	{
+		Offset = FLinearColor(0, 0, 0, 0);
+		Rotation = 0;
+		Scale = FLinearColor(1, 1, 1, 1);
+		TexCoord = 0;
+	}
+};
+
 struct FglTFRuntimeMaterial
 {
 	bool bTwoSided;
@@ -901,7 +927,7 @@ struct FglTFRuntimeMaterial
 
 	TArray<FglTFRuntimeMipMap> BaseColorTextureMips;
 	UTexture2D* BaseColorTextureCache;
-	int32 BaseColorTexCoord;
+	FglTFRuntimeTextureTransform BaseColorTransform;
 
 	bool bHasMetallicFactor;
 	double MetallicFactor;
@@ -910,22 +936,22 @@ struct FglTFRuntimeMaterial
 
 	TArray<FglTFRuntimeMipMap> MetallicRoughnessTextureMips;
 	UTexture2D* MetallicRoughnessTextureCache;
-	int32 MetallicRoughnessTexCoord;
+	FglTFRuntimeTextureTransform MetallicRoughnessTransform;
 
 	TArray<FglTFRuntimeMipMap> NormalTextureMips;
 	UTexture2D* NormalTextureCache;
-	int32 NormalTexCoord;
+	FglTFRuntimeTextureTransform NormalTransform;
 
 	TArray<FglTFRuntimeMipMap> OcclusionTextureMips;
 	UTexture2D* OcclusionTextureCache;
-	int32 OcclusionTexCoord;
+	FglTFRuntimeTextureTransform OcclusionTransform;
 
 	bool bHasEmissiveFactor;
 	FLinearColor EmissiveFactor;
 
 	TArray<FglTFRuntimeMipMap> EmissiveTextureMips;
 	UTexture2D* EmissiveTextureCache;
-	int32 EmissiveTexCoord;
+	FglTFRuntimeTextureTransform EmissiveTransform;
 
 	bool bHasSpecularFactor;
 	FLinearColor SpecularFactor;
@@ -935,7 +961,7 @@ struct FglTFRuntimeMaterial
 
 	TArray<FglTFRuntimeMipMap> SpecularGlossinessTextureMips;
 	UTexture2D* SpecularGlossinessTextureCache;
-	int32 SpecularGlossinessTexCoord;
+	FglTFRuntimeTextureTransform SpecularGlossinessTransform;
 
 	float BaseSpecularFactor;
 
@@ -944,7 +970,7 @@ struct FglTFRuntimeMaterial
 
 	TArray<FglTFRuntimeMipMap> DiffuseTextureMips;
 	UTexture2D* DiffuseTextureCache;
-	int32 DiffuseTexCoord;
+	FglTFRuntimeTextureTransform DiffuseTransform;
 
 	bool bKHR_materials_pbrSpecularGlossiness;
 	double NormalTextureScale;
@@ -954,7 +980,9 @@ struct FglTFRuntimeMaterial
 	double TransmissionFactor;
 	TArray<FglTFRuntimeMipMap> TransmissionTextureMips;
 	UTexture2D* TransmissionTextureCache;
-	int32 TransmissionTexCoord;
+	FglTFRuntimeTextureTransform TransmissionTransform;
+
+	bool bMasked;
 
 	FglTFRuntimeMaterial()
 	{
@@ -964,33 +992,26 @@ struct FglTFRuntimeMaterial
 		MaterialType = EglTFRuntimeMaterialType::Opaque;
 		bHasBaseColorFactor = false;
 		BaseColorTextureCache = nullptr;
-		BaseColorTexCoord = 0;
 		bHasMetallicFactor = false;
 		bHasRoughnessFactor = false;
 		MetallicRoughnessTextureCache = nullptr;
-		MetallicRoughnessTexCoord = 0;
 		NormalTextureCache = nullptr;
-		NormalTexCoord = 0;
 		OcclusionTextureCache = nullptr;
-		OcclusionTexCoord = 0;
 		bHasEmissiveFactor = false;
 		EmissiveTextureCache = nullptr;
-		EmissiveTexCoord = 0;
 		bHasSpecularFactor = false;
 		bHasGlossinessFactor = false;
 		SpecularGlossinessTextureCache = nullptr;
-		SpecularGlossinessTexCoord = 0;
 		BaseSpecularFactor = 0;
 		bHasDiffuseFactor = false;
 		DiffuseTextureCache = nullptr;
-		DiffuseTexCoord = 0;
 		bKHR_materials_pbrSpecularGlossiness = false;
 		NormalTextureScale = 1;
 		bKHR_materials_transmission = false;
 		bHasTransmissionFactor = true;
 		TransmissionFactor = 0;
 		TransmissionTextureCache = nullptr;
-		TransmissionTexCoord = 0;
+		bMasked = false;
 	}
 };
 
@@ -1230,7 +1251,9 @@ protected:
 	double GetJsonObjectNumber(TSharedRef<FJsonObject> JsonObject, const FString& FieldName, const double DefaultValue);
 	int32 GetJsonObjectIndex(TSharedRef<FJsonObject> JsonObject, const FString& FieldName, const int32 DefaultValue);
 	int32 GetJsonExtensionObjectIndex(TSharedRef<FJsonObject> JsonObject, const FString& ExtensionName, const FString& FieldName, const int32 DefaultValue);
+	double GetJsonExtensionObjectNumber(TSharedRef<FJsonObject> JsonObject, const FString& ExtensionName, const FString& FieldName, const double DefaultValue);
 	TArray<int32> GetJsonExtensionObjectIndices(TSharedRef<FJsonObject> JsonObject, const FString& ExtensionName, const FString& FieldName);
+	TArray<double> GetJsonExtensionObjectNumbers(TSharedRef<FJsonObject> JsonObject, const FString& ExtensionName, const FString& FieldName);
 
 	bool GetJsonObjectBytes(TSharedRef<FJsonObject> JsonObject, TArray64<uint8>& Bytes);
 	bool GetJsonObjectBool(TSharedRef<FJsonObject> JsonObject, const FString& FieldName, const bool DefaultValue);
@@ -1357,7 +1380,9 @@ protected:
 	{
 		int64 AccessorIndex;
 		if (!JsonObject->TryGetNumberField(Name, AccessorIndex))
+		{
 			return false;
+		}
 
 		TArray64<uint8> Bytes;
 		int64 ComponentType, Stride, Elements, ElementSize, Count;
