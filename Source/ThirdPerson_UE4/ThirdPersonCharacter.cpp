@@ -46,7 +46,7 @@ AThirdPersonCharacter::AThirdPersonCharacter()
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 
 	readyPlayerMeComponent = CreateDefaultSubobject<UReadyPlayerMeActorComponent>(TEXT("ReadyPlayerMeComponent"));
-	readyPlayerMeComponent->RegisterComponent();
+	this->AddOwnedComponent(readyPlayerMeComponent);
 }
 
 // Called when the game starts or when spawned
