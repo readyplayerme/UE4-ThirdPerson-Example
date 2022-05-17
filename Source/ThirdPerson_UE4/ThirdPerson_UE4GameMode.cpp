@@ -7,7 +7,7 @@
 AThirdPerson_UE4GameMode::AThirdPerson_UE4GameMode()
 {
 	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ReadyPlayerme/Blueprints/BP_ThirdPerson_RPM"));
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ReadyPlayerme/Blueprints/RPM_ThirdPersonCharacter"));
 	if (PlayerPawnBPClass.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
