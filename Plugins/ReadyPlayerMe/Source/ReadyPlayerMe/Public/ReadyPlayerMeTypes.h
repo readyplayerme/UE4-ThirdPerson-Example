@@ -4,20 +4,20 @@
 #include "ReadyPlayerMeTypes.generated.h"
 
 UENUM(BlueprintType)
-enum AvatarGender
+enum class EAvatarGender : uint8
 {
-	Masculine UMETA(DisplayName = GENDER_MASCULINE),
-	Feminine UMETA(DisplayName = GENDER_FEMININE)
+	Undefined UMETA(DisplayName = "Gender Undefined"),
+	Masculine UMETA(DisplayName = "Gender Masculine"),
+	Feminine UMETA(DisplayName = "Gender Feminine")
 };
 
 UENUM(BlueprintType)
-enum AvatarBodyType
+enum class EAvatarBodyType : uint8
 {
-	Undefined UMETA(DisplayName = TYPE_UNDEFINED),
-	Fullbody UMETA(DisplayName = TYPE_FULLBODY),
-	Halfbody UMETA(DisplayName = TYPE_HALFBODY)
+	Undefined UMETA(DisplayName = "Undefined Body Type"),
+	FullBody UMETA(DisplayName = "Full Body Type"),
+	HalfBody UMETA(DisplayName = "Half Body Type")
 };
-
 
 USTRUCT(BlueprintType)
 struct FAvatarMetadata
@@ -25,20 +25,50 @@ struct FAvatarMetadata
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReadyPlayerMe")
-		TEnumAsByte<AvatarBodyType> bodyType;
+	EAvatarBodyType BodyType;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReadyPlayerMe")
-		TEnumAsByte<AvatarGender> outfitGender;
+	EAvatarGender OutfitGender;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReadyPlayerMe")
-		int32 outfitVersion;
+	int32 OutfitVersion;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ReadyPlayerMe")
+	FString LastModifiedDate;
 
 	FAvatarMetadata()
 	{
-		bodyType = Undefined;
-		outfitGender = Masculine;
-		outfitVersion = 1;
+		BodyType = EAvatarBodyType::Undefined;
+		OutfitGender = EAvatarGender::Undefined;
+		OutfitVersion = 1;
 	}
 };
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FAvatarMetadataHttpResponse, const FAvatarMetadata&, AvataMetadata);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FAvatarLoadCompleted, class UglTFRuntimeAsset*, Asset, const FAvatarMetadata&, Metadata);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FAvatarLoadFailed, const FString, errorMessage);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FAvatarLoadFailed, const FString&, ErrorMessage);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FDownloadImageCompleted, class UTexture*, Texture);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FDownloadImageFailed, const FString&, ErrorMessage);
+
+UENUM(BlueprintType)
+enum class ERenderSceneType : uint8
+{
+	FullBodyPortrait UMETA(DisplayName = "Full Body Portrait"),
+	HalfBodyPortrait UMETA(DisplayName = "Half Body Portrait"),
+	FullBodyPortraitTransparent UMETA(DisplayName = "Full Body Portrait Transparent"),
+	HalfBodyPortraitTransparent UMETA(DisplayName = "Half Body Portrait Transparent"),
+	FullBodyPostureTransparent UMETA(DisplayName = "Full Body Posture Transparent")
+};
+
+struct FAvatarUri
+{
+	FString Guid;
+	FString ModelUrl;
+	FString LocalModelPath;
+	FString MetadataUrl;
+	FString LocalMetadataPath;
+};
+
+DECLARE_LOG_CATEGORY_EXTERN(LogReadyPlayerMe, Log, All);
