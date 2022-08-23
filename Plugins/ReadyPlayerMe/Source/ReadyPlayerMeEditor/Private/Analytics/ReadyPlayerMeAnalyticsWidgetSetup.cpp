@@ -10,7 +10,7 @@ static const FString STARTUP_BLUEPRINT = "/ReadyPlayerMe/Editor/BP_RPM_StartupEd
 
 void FReadyPlayerMeAnalyticsWidgetSetup::Startup()
 {
-	const auto EditorSettings = GetDefault<USReadyPlayerMeEditorSettings>();
+	const auto EditorSettings = GetDefault<UReadyPlayerMeEditorSettings>();
 	FReadyPlayerMeAnalyticsEventLogger::Get().SetEnabled(EditorSettings->bEnableAnalytics);
 	if (EditorSettings->bDontAskAgain || EditorSettings->bEnableAnalytics)
 	{

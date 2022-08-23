@@ -2,6 +2,8 @@
 
 
 #include "ReadyPlayerMeAvatarLoader.h"
+
+#include "ReadyPlayerMeSettings.h"
 #include "Utils/ReadyPlayerMeGlTFConfigCreator.h"
 #include "Utils/ReadyPlayerMeMetadataExtractor.h"
 #include "Utils/ReadyPlayerMeAvatarStorage.h"
@@ -18,6 +20,16 @@ UReadyPlayerMeAvatarLoader::UReadyPlayerMeAvatarLoader()
 {
 }
 
+bool UReadyPlayerMeAvatarLoader::IsCachingEnabled()
+{
+	const UReadyPlayerMeSettings* Settings = GetDefault<UReadyPlayerMeSettings>();
+	if (Settings)
+	{
+		return Settings->bEnableAvatarCaching;
+	}
+	return false;
+}
+
 void UReadyPlayerMeAvatarLoader::LoadAvatar(const FString& Url, const FAvatarLoadCompleted& OnLoadCompleted, const FAvatarLoadFailed& OnLoadFailed, bool bShouldLoadMetadata)
 {
 	if (Url.IsEmpty())
@@ -29,7 +41,7 @@ void UReadyPlayerMeAvatarLoader::LoadAvatar(const FString& Url, const FAvatarLoa
 	OnAvatarLoadCompleted = OnLoadCompleted;
 	OnAvatarLoadFailed = OnLoadFailed;
 	AvatarUri = FReadyPlayerMeUrlConvertor::CreateAvatarUri(Url);
-	if (FReadyPlayerMeAvatarStorage::AvatarExists(*AvatarUri))
+	if (IsCachingEnabled() && FReadyPlayerMeAvatarStorage::AvatarExists(*AvatarUri))
 	{
 		bIsTryingToUpdate = true;
 		LoadAvatarMetadata();
@@ -111,15 +123,18 @@ void UReadyPlayerMeAvatarLoader::ExecuteFailureCallback(const FString& ErrorMess
 void UReadyPlayerMeAvatarLoader::SaveMetadata(const FString& ResponseContent)
 {
 	const FString UpdatedMetadataStr = FReadyPlayerMeMetadataExtractor::AddModifiedDateToMetadataJson(ResponseContent, AvatarMetadata->LastModifiedDate);
-	if (!FReadyPlayerMeAvatarStorage::SaveMetadata(AvatarUri->LocalMetadataPath, UpdatedMetadataStr))
+	if (IsCachingEnabled())
 	{
-		UE_LOG(LogReadyPlayerMe, Warning, TEXT("Failed to save the avatar metadata"));
+		if (!FReadyPlayerMeAvatarStorage::SaveMetadata(AvatarUri->LocalMetadataPath, UpdatedMetadataStr))
+		{
+			UE_LOG(LogReadyPlayerMe, Warning, TEXT("Failed to save the avatar metadata"));
+		}
 	}
 }
 
 void UReadyPlayerMeAvatarLoader::OnMetadataReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
 {
-	if (bSuccess && Response.IsValid())
+	if (bSuccess && Response.IsValid() && EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
 		AvatarMetadata = FReadyPlayerMeMetadataExtractor::ExtractAvatarMetadata(Response->GetContentAsString());
 		AvatarMetadata->LastModifiedDate = Response->GetHeader(HEADER_LAST_MODIFIED);
@@ -133,7 +148,7 @@ void UReadyPlayerMeAvatarLoader::OnMetadataReceived(FHttpRequestPtr Request, FHt
 
 void UReadyPlayerMeAvatarLoader::OnAvatarModelReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
 {
-	if (bSuccess && Response.IsValid())
+	if (bSuccess && Response.IsValid() && EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
 		const TArray<uint8>& AvatarData = Response->GetContent();
 		GlTFRuntimeAsset = UglTFRuntimeFunctionLibrary::glTFLoadAssetFromData(AvatarData, FReadyPlayerMeGlTFConfigCreator::GetGlTFRuntimeConfig());
@@ -142,9 +157,12 @@ void UReadyPlayerMeAvatarLoader::OnAvatarModelReceived(FHttpRequestPtr Request, 
 			ExecuteFailureCallback("Failed to load the avatar model");
 			return;
 		}
-		if (!FReadyPlayerMeAvatarStorage::SaveAvatar(AvatarUri->LocalModelPath, AvatarData))
+		if (IsCachingEnabled())
 		{
-			UE_LOG(LogReadyPlayerMe, Warning, TEXT("Failed to save the avatar model"));
+			if (!FReadyPlayerMeAvatarStorage::SaveAvatar(AvatarUri->LocalModelPath, AvatarData))
+			{
+				UE_LOG(LogReadyPlayerMe, Warning, TEXT("Failed to save the avatar model"));
+			}
 		}
 		ExecuteSuccessCallback();
 	}

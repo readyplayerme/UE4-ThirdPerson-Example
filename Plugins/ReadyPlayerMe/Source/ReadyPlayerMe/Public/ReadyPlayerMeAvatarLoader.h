@@ -33,6 +33,8 @@ public:
 	void LoadAvatar(const FString& Url, const FAvatarLoadCompleted& OnLoadCompleted, const FAvatarLoadFailed& OnLoadFailed, bool bShouldLoadMetadata = true);
 
 private:
+	static bool IsCachingEnabled();
+
 	void OnMetadataReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess);
 	
 	void OnAvatarModelReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess);

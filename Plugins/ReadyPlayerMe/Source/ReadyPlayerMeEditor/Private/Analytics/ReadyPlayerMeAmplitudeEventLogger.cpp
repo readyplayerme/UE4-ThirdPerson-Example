@@ -11,8 +11,6 @@
 static const FString ENDPOINT = "https://analytics-sdk.readyplayer.me/";
 static const FString TARGET = "unreal";
 
-static const FString EVENT_SET_USER_PROPERTIES = "set user properties";
-static const FString EVENT_ALLOW_LOGGING = "allow tracking";
 static const FString JSON_EVENTS = "events";
 static const FString JSON_TARGET = "target";
 
@@ -72,22 +70,13 @@ FString FReadyPlayerMeAmplitudeEventLogger::JsonToString(const TSharedRef<FJsonO
 	return JsonString;
 }
 
-void FReadyPlayerMeAmplitudeEventLogger::IdentifyUser() const
+void FReadyPlayerMeAmplitudeEventLogger::LogEvent(const FString& EventName, const TSharedPtr<FJsonObject>& Params) const
 {
-	const auto JsonObject = MakeEventJson(EVENT_SET_USER_PROPERTIES);
-	JsonObject->SetObjectField(JSON_USER_PROPERTIES, MakeUserPropertiesJson());
-	SendEvent(JsonObject);
-}
-
-void FReadyPlayerMeAmplitudeEventLogger::LogEvent(const FString& EventName) const
-{
-	SendEvent(MakeEventJson(EventName));
-}
-
-void FReadyPlayerMeAmplitudeEventLogger::LogAllowLogging() const
-{
-	const auto EventJson = MakeEventJson(EVENT_ALLOW_LOGGING);
-	EventJson->SetObjectField(JSON_USER_PROPERTIES, MakeUserPropertiesJson());
+	const auto EventJson = MakeEventJson(EventName);
+	if (Params)
+	{
+		EventJson->SetObjectField(JSON_USER_PROPERTIES, Params);
+	}
 	SendEvent(EventJson);
 }
 
@@ -97,8 +86,6 @@ void FReadyPlayerMeAmplitudeEventLogger::SendEvent(TSharedRef<FJsonObject> Event
 	const TArray<TSharedPtr<FJsonValue>> Events { MakeShared<FJsonValueObject>(EventJson) };
 	JsonObject->SetStringField(JSON_TARGET, TARGET);
 	JsonObject->SetArrayField(JSON_EVENTS, Events);
-	
-
 
 	const auto Content = JsonToString(JsonObject);
 	SendHttpRequest(ENDPOINT, Content);

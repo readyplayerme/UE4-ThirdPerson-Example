@@ -46,6 +46,10 @@ public class ReadyPlayerMe : ModuleRules
 			}
 			);
 
+#if UE_4_26_OR_LATER
+		PrivateDependencyModuleNames.Add("DeveloperSettings");
+#endif
+
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{

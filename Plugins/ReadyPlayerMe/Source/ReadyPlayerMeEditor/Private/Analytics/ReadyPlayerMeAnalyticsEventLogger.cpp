@@ -2,9 +2,15 @@
 
 #include "ReadyPlayerMeAnalyticsEventLogger.h"
 #include "ReadyPlayerMeAmplitudeEventLogger.h"
+#include "Kismet/KismetStringLibrary.h"
 
 static const FString EVENT_OPEN_PROJECT = "open project";
 static const FString EVENT_CLOSE_PROJECT = "close project";
+static const FString EVENT_ENABLE_CACHING = "enable caching";
+static const FString EVENT_SET_USER_PROPERTIES = "set user properties";
+static const FString EVENT_ALLOW_LOGGING = "allow tracking";
+
+static const FString JSON_CACHING_ENABLED = "caching enabled";
 
 FReadyPlayerMeAnalyticsEventLogger& FReadyPlayerMeAnalyticsEventLogger::Get()
 {
@@ -18,7 +24,7 @@ void FReadyPlayerMeAnalyticsEventLogger::LogOpenProject() const
 	{
 		return;
 	}
-	Logger.IdentifyUser();
+	Logger.LogEvent(EVENT_SET_USER_PROPERTIES, Logger.MakeUserPropertiesJson());
 	Logger.LogEvent(EVENT_OPEN_PROJECT);
 }
 
@@ -31,6 +37,17 @@ void FReadyPlayerMeAnalyticsEventLogger::LogCloseProject() const
 	Logger.LogEvent(EVENT_CLOSE_PROJECT);
 }
 
+void FReadyPlayerMeAnalyticsEventLogger::LogEnableAvatarCaching(bool bEnabled) const
+{
+	if (!bIsEnabled)
+	{
+		return;
+	}
+	const auto JsonObject = MakeShared<FJsonObject>();
+	JsonObject->SetStringField(JSON_CACHING_ENABLED, UKismetStringLibrary::Conv_BoolToString(bEnabled));
+	Logger.LogEvent(EVENT_ENABLE_CACHING, JsonObject);
+}
+
 void FReadyPlayerMeAnalyticsEventLogger::SetEnabled(bool bEnabled)
 {
 	bIsEnabled = bEnabled;
@@ -39,6 +56,6 @@ void FReadyPlayerMeAnalyticsEventLogger::SetEnabled(bool bEnabled)
 void FReadyPlayerMeAnalyticsEventLogger::EnableAnalytics()
 {
 	bIsEnabled = true;
-	Logger.LogAllowLogging();
+	Logger.LogEvent(EVENT_ALLOW_LOGGING, Logger.MakeUserPropertiesJson());
 }
 

@@ -13,7 +13,7 @@ constexpr float RENDER_REQUEST_TIMEOUT = 60.f;
 
 void UReadyPlayerMeRenderLoader::OnRenderCallback(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
 {
-	if (bSuccess && Response.IsValid())
+	if (bSuccess && Response.IsValid() && EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
 		const FString ImageUrl = FReadyPlayerMeRenderRequestParams::ExtractUrlFromRenderResponse(Response->GetContentAsString());
 		if (FReadyPlayerMeUrlConvertor::IsUrl(ImageUrl))

@@ -4,7 +4,7 @@
 #include "Utils/ReadyPlayerMeUrlConvertor.h"
 #include "Internationalization/Regex.h"
 
-static const FString SHORTCODE_URL_PREFIX = "https://readyplayer.me/api/avatar/";
+static const FString SHORTCODE_URL_PREFIX = "https://models.readyplayer.me/";
 static const FString URL_PATTERN = "https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,4}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)";
 static const FString SHORTCODE_PATTERN = "^[a-zA-Z0-9]*$";
 static const TCHAR* SUFFIX_GLB = TEXT(".glb");
@@ -26,7 +26,7 @@ FString FReadyPlayerMeUrlConvertor::GetUrlFromShortcode(const FString& Shortcode
 	const FRegexPattern RegexPattern(SHORTCODE_PATTERN);
 	FRegexMatcher RegexMatcher(RegexPattern, Shortcode);
 
-	return RegexMatcher.FindNext() ? SHORTCODE_URL_PREFIX + Shortcode : TEXT("");
+	return RegexMatcher.FindNext() ? SHORTCODE_URL_PREFIX + Shortcode + SUFFIX_GLB : TEXT("");
 }
 
 bool FReadyPlayerMeUrlConvertor::IsUrl(const FString& Url)
@@ -39,14 +39,20 @@ bool FReadyPlayerMeUrlConvertor::IsUrl(const FString& Url)
 
 FAvatarUri FReadyPlayerMeUrlConvertor::CreateAvatarUri(const FString& Url)
 {
-	FAvatarUri AvatarUri;
+	FString UrlLink, UrlQueryString;
+	if (!Url.Split(TEXT("?"), &UrlLink, &UrlQueryString))
+	{
+		UrlLink = Url;
+	}
 	FString Path, Guid, Extension;
-	FPaths::Split(Url, Path, Guid, Extension);
-	AvatarUri.Guid = Guid;
+	FPaths::Split(UrlLink, Path, Guid, Extension);
 	const FString LocalFilename = FPaths::ProjectPersistentDownloadDir() + "/Avatars/" + Guid + "/" + Guid;
-	AvatarUri.ModelUrl = Url;
+	const FString UrlPath = Path + "/" + Guid;
+	FAvatarUri AvatarUri;
+	AvatarUri.Guid = Guid;
+	AvatarUri.ModelUrl = UrlPath + SUFFIX_GLB;
 	AvatarUri.LocalModelPath = LocalFilename + SUFFIX_GLB;
-	AvatarUri.MetadataUrl = Url.Replace(SUFFIX_GLB,SUFFIX_JSON);
+	AvatarUri.MetadataUrl = UrlPath + SUFFIX_JSON;
 	AvatarUri.LocalMetadataPath = LocalFilename + SUFFIX_JSON;
 	return AvatarUri;
 }

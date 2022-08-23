@@ -83,3 +83,19 @@ bool FReadyPlayerMeAvatarStorage::SaveMetadata(const FString& MetadataFilePath, 
 	UE_LOG(LogReadyPlayerMe, Warning, TEXT("Failed to save the downloaded file"));
 	return false;
 }
+
+void FReadyPlayerMeAvatarStorage::ClearAvatarCache()
+{
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	
+	FString Directory = FPlatformProcess::UserDir();
+	const FString CompletePath = FPaths::ProjectPersistentDownloadDir() + "/Avatars/";;
+
+	if (PlatformFile.DirectoryExists(*CompletePath))
+	{
+		IFileManager::Get().DeleteDirectory(*CompletePath, true, true);
+		return;
+	}
+	UE_LOG(LogReadyPlayerMe, Warning, TEXT("No directory found, skipping Avatar cache clear"));
+
+}

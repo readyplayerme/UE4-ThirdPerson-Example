@@ -12,6 +12,7 @@ public:
 
 	void LogOpenProject() const;
 	void LogCloseProject() const;
+	void LogEnableAvatarCaching(bool bEnabled) const;
 	void SetEnabled(bool bEnabled);
 	void EnableAnalytics();
 

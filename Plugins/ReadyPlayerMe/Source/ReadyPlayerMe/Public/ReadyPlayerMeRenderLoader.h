@@ -5,11 +5,7 @@
 #include "CoreMinimal.h"
 #include "ReadyPlayerMeTypes.h"
 #include "Interfaces/IHttpRequest.h"
-#include "UObject/NoExportTypes.h"
 #include "ReadyPlayerMeRenderLoader.generated.h"
-
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FRenderHttpResponse, const FString&, Response);
 
 /**
  * It's responsible for Loading the rendered image from the ModelUrl.

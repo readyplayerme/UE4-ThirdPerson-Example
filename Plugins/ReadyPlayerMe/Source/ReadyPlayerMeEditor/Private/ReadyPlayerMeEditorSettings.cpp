@@ -4,14 +4,14 @@
 #include "Analytics/ReadyPlayerMeAnalyticsWidgetSetup.h"
 #include "Analytics/ReadyPlayerMeAnalyticsEventLogger.h"
 
-USReadyPlayerMeEditorSettings::USReadyPlayerMeEditorSettings()
+UReadyPlayerMeEditorSettings::UReadyPlayerMeEditorSettings()
 	: bEnableAnalytics(false)
 	, bDontAskAgain(false)
 {
 }
 
-void USReadyPlayerMeEditorSettings::EnableAnalytics() {
-	USReadyPlayerMeEditorSettings* Settings = GetMutableDefault<USReadyPlayerMeEditorSettings>();
+void UReadyPlayerMeEditorSettings::EnableAnalytics() {
+	UReadyPlayerMeEditorSettings* Settings = GetMutableDefault<UReadyPlayerMeEditorSettings>();
 	if (Settings)
 	{
 		Settings->bEnableAnalytics = true;
@@ -21,9 +21,9 @@ void USReadyPlayerMeEditorSettings::EnableAnalytics() {
 	}
 }
 
-void USReadyPlayerMeEditorSettings::SetDontAskAgain(bool bDontAsk)
+void UReadyPlayerMeEditorSettings::SetDontAskAgain(bool bDontAsk)
 {
-	USReadyPlayerMeEditorSettings* Settings = GetMutableDefault<USReadyPlayerMeEditorSettings>();
+	UReadyPlayerMeEditorSettings* Settings = GetMutableDefault<UReadyPlayerMeEditorSettings>();
 	if (Settings)
 	{
 		Settings->bDontAskAgain = bDontAsk;
@@ -31,3 +31,19 @@ void USReadyPlayerMeEditorSettings::SetDontAskAgain(bool bDontAsk)
 		FReadyPlayerMeAnalyticsWidgetSetup::RemoveWidget();
 	}
 }
+
+#if WITH_EDITOR
+void UReadyPlayerMeEditorSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (bEnableAnalytics)
+	{
+		FReadyPlayerMeAnalyticsEventLogger::Get().EnableAnalytics();
+		FReadyPlayerMeAnalyticsWidgetSetup::RemoveWidget();
+	}
+	else
+	{
+		FReadyPlayerMeAnalyticsEventLogger::Get().SetEnabled(false);
+	}
+}
+#endif

@@ -12,12 +12,10 @@ class FReadyPlayerMeAmplitudeEventLogger
 public:
 	FReadyPlayerMeAmplitudeEventLogger();
 
-	void LogEvent(const FString& EventName) const;
-	void LogAllowLogging() const;
-	void IdentifyUser() const;
+	void LogEvent(const FString& EventName, const TSharedPtr<FJsonObject>& Params = nullptr) const;
+	TSharedRef<FJsonObject> MakeUserPropertiesJson() const;
 
 private:
-	TSharedRef<FJsonObject> MakeUserPropertiesJson() const;
 	TSharedRef<FJsonObject> MakeEventJson(const FString& EventName) const;
 
 	static void SendEvent(TSharedRef<FJsonObject> EventJson);

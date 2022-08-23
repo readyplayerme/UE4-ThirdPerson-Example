@@ -25,6 +25,7 @@ void UReadyPlayerMeComponent::LoadAvatar(const FAvatarLoadFailed& OnLoadFailed)
 		(void)OnLoadFailed.ExecuteIfBound("No target skeleton set");
 		return;
 	}
+	const bool bShouldLoadMetadata = FReadyPlayerMeUrlConvertor::IsUrl(UrlShortcode);
 
 	UrlShortcode = FReadyPlayerMeUrlConvertor::GetValidatedUrlShortCode(UrlShortcode);
 
@@ -33,8 +34,6 @@ void UReadyPlayerMeComponent::LoadAvatar(const FAvatarLoadFailed& OnLoadFailed)
 		(void)OnLoadFailed.ExecuteIfBound("Url invalid");
 		return;
 	}
-
-	const bool bShouldLoadMetadata = FReadyPlayerMeUrlConvertor::IsUrl(UrlShortcode);
 
 	AvatarLoader = NewObject<UReadyPlayerMeAvatarLoader>(this,TEXT("AvatarLoader"));
 	AvatarLoader->LoadAvatar(UrlShortcode, OnAvatarLoadCompleted, OnLoadFailed, bShouldLoadMetadata);

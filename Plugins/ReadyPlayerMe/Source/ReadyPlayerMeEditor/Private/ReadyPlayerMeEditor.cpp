@@ -4,11 +4,13 @@
 
 #include "Analytics/ReadyPlayerMeAnalyticsWidgetSetup.h"
 #include "Analytics/ReadyPlayerMeAnalyticsEventLogger.h"
+#include "Analytics/ReadyPlayerMeSettingsLoggingSetup.h"
 
 #define LOCTEXT_NAMESPACE "FReadyPlayerMeEditorModule"
 
 void FReadyPlayerMeEditorModule::StartupModule()
 {
+	FReadyPlayerMeSettingsLoggingSetup::Setup();
 	FReadyPlayerMeAnalyticsWidgetSetup::Startup();
 	FReadyPlayerMeAnalyticsEventLogger::Get().LogOpenProject();
 }

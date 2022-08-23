@@ -21,7 +21,8 @@ public class ReadyPlayerMeEditor : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core"
+				"Core",
+				"ReadyPlayerMe"
 			}
 			);
 

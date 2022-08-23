@@ -8,12 +8,12 @@
 
 UCLASS(config=EditorPerProjectUserSettings, meta = (DisplayName="Ready Player Me"))
 
-class READYPLAYERMEEDITOR_API USReadyPlayerMeEditorSettings : public UDeveloperSettings
+class READYPLAYERMEEDITOR_API UReadyPlayerMeEditorSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 
 public:
-	USReadyPlayerMeEditorSettings();
+	UReadyPlayerMeEditorSettings();
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Privacy")
 	bool bEnableAnalytics;
@@ -26,4 +26,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Analytics Privacy")
 	static void SetDontAskAgain(bool bDontAsk);
+	
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 };

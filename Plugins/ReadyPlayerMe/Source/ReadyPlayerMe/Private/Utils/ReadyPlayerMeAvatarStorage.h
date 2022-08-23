@@ -13,6 +13,7 @@ public:
 	
 	static bool AvatarExists(const FAvatarUri& AvatarUri);
 	static FString LoadMetadata(const FString& Path);
+	static void ClearAvatarCache();
 
 private:
 	static bool CheckAndRemoveExistingFile(const FString& FilePath);
