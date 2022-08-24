@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.17.0] 2022-08-23
+
+## Added
+
+- 2D avatar rendering using Render API
+- Avatar caching (experimental)
+- Fully optional SDK-analytics
+
+## Changed
+
+- Big refactor and reorganization of previous C++ classes
+- Avatar requests both, avatar metadata and glb in parallel to reduce wait time
+
 ## [0.16.0] 2022-05-05
 
 ## Fixed

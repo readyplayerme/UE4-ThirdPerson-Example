@@ -6,26 +6,21 @@
 #include "GameFramework/Actor.h"
 #include "ReadyPlayerMeActor.generated.h"
 
+/** Intended to be used as an actor for runtime loading and displaying the avatars. */
 UCLASS()
 class READYPLAYERME_API AReadyPlayerMeActor : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
+	/** Default constructor. Sets default values for this actor's properties. */
 	AReadyPlayerMeActor();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = ReadyPlayerMe, meta = (ExposeFunctionCategories = "Ready Player Me", AllowPrivateAccess = "true"))
+	/** The default SkeletalMeshComponent. The skeletal mesh will be set during the avatar loading process. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Ready Player Me", meta = (ExposeFunctionCategories = "Ready Player Me", AllowPrivateAccess = "true"))
 	class USkeletalMeshComponent* SkeletalMeshComponent;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = ReadyPlayerMe, meta = (ExposeFunctionCategories = "Ready Player Me", AllowPrivateAccess = "true"))
-	class UReadyPlayerMeActorComponent* ReadyPlayerMeComponent;
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	/** Handles the loading and setup of the avatar. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Ready Player Me", meta = (ExposeFunctionCategories = "Ready Player Me", AllowPrivateAccess = "true"))
+	class UReadyPlayerMeComponent* ReadyPlayerMeComponent;
 };

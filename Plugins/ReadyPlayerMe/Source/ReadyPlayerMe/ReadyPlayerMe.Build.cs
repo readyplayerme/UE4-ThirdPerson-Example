@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright © 2021++ Ready Player Me
 
 using UnrealBuildTool;
 
@@ -25,10 +25,7 @@ public class ReadyPlayerMe : ModuleRules
 			new string[]
 			{
 				"Core",
-				"glTFRuntime",
-				"HTTP", 
-				"Json", 
-				"JsonUtilities",
+				"glTFRuntime"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -40,12 +37,19 @@ public class ReadyPlayerMe : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore"
+				"SlateCore",
+				"Json",
+				"JsonUtilities",
+				"HTTP",
+				"UMG"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
-		
-		
+
+#if UE_4_26_OR_LATER
+		PrivateDependencyModuleNames.Add("DeveloperSettings");
+#endif
+
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{
