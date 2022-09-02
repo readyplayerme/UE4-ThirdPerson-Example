@@ -29,6 +29,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=ReadyPlayerMe)
+	class UReadyPlayerMeComponent* ReadyPlayerMeComponent;
+
 protected:
 
 	/** Resets HMD orientation in VR. */
