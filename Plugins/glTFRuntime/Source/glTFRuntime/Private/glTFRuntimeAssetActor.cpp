@@ -15,6 +15,9 @@ AglTFRuntimeAssetActor::AglTFRuntimeAssetActor()
 	AssetRoot = CreateDefaultSubobject<USceneComponent>(TEXT("AssetRoot"));
 	RootComponent = AssetRoot;
 	bAllowNodeAnimations = true;
+	bStaticMeshesAsSkeletal = false;
+	bAllowSkeletalAnimations = true;
+	bAllowPoseAnimations = true;
 }
 
 // Called when the game starts or when spawned
@@ -26,6 +29,8 @@ void AglTFRuntimeAssetActor::BeginPlay()
 	{
 		return;
 	}
+
+	double LoadingStartTime = FPlatformTime::Seconds();
 
 	TArray<FglTFRuntimeScene> Scenes = Asset->GetScenes();
 	for (FglTFRuntimeScene& Scene : Scenes)
@@ -58,6 +63,8 @@ void AglTFRuntimeAssetActor::BeginPlay()
 			}
 		}
 	}
+
+	UE_LOG(LogGLTFRuntime, Log, TEXT("Asset loaded in %f seconds"), FPlatformTime::Seconds() - LoadingStartTime);
 }
 
 void AglTFRuntimeAssetActor::ProcessNode(USceneComponent* NodeParentComponent, const FName SocketName, FglTFRuntimeNode& Node)
@@ -99,7 +106,7 @@ void AglTFRuntimeAssetActor::ProcessNode(USceneComponent* NodeParentComponent, c
 	}
 	else
 	{
-		if (Node.SkinIndex < 0)
+		if (Node.SkinIndex < 0 && !bStaticMeshesAsSkeletal)
 		{
 			UStaticMeshComponent* StaticMeshComponent = NewObject<UStaticMeshComponent>(this, GetSafeNodeName<UStaticMeshComponent>(Node));
 			StaticMeshComponent->SetupAttachment(NodeParentComponent);
@@ -196,14 +203,21 @@ void AglTFRuntimeAssetActor::ProcessNode(USceneComponent* NodeParentComponent, c
 	else
 	{
 		USkeletalMeshComponent* SkeletalMeshComponent = Cast<USkeletalMeshComponent>(NewComponent);
-		FglTFRuntimeSkeletalAnimationConfig SkeletalAnimationConfig;
-		UAnimSequence* SkeletalAnimation = Asset->LoadNodeSkeletalAnimation(SkeletalMeshComponent->SkeletalMesh, Node.Index, SkeletalAnimationConfig);
-		if (SkeletalAnimation)
+		if (bAllowSkeletalAnimations)
 		{
-			SkeletalMeshComponent->AnimationData.AnimToPlay = SkeletalAnimation;
-			SkeletalMeshComponent->AnimationData.bSavedLooping = true;
-			SkeletalMeshComponent->AnimationData.bSavedPlaying = true;
-			SkeletalMeshComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+			FglTFRuntimeSkeletalAnimationConfig SkeletalAnimationConfig;
+			UAnimSequence* SkeletalAnimation = Asset->LoadNodeSkeletalAnimation(SkeletalMeshComponent->SkeletalMesh, Node.Index, SkeletalAnimationConfig);
+			if (!SkeletalAnimation && bAllowPoseAnimations)
+			{
+				SkeletalAnimation = Asset->CreateAnimationFromPose(SkeletalMeshComponent->SkeletalMesh, SkeletalAnimationConfig);
+			}
+			if (SkeletalAnimation)
+			{
+				SkeletalMeshComponent->AnimationData.AnimToPlay = SkeletalAnimation;
+				SkeletalMeshComponent->AnimationData.bSavedLooping = true;
+				SkeletalMeshComponent->AnimationData.bSavedPlaying = true;
+				SkeletalMeshComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+			}
 		}
 	}
 

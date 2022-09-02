@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ThirdPerson_UE4Character.h"
+#include "ReadyPlayerMeComponent.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -45,6 +46,8 @@ AThirdPerson_UE4Character::AThirdPerson_UE4Character()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+	ReadyPlayerMeComponent = CreateDefaultSubobject<UReadyPlayerMeComponent>(TEXT("ReadyPlayerMeComponent"));
+	AddOwnedComponent(ReadyPlayerMeComponent);
 }
 
 //////////////////////////////////////////////////////////////////////////
