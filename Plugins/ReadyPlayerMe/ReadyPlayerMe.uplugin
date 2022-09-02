@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "16.0",
+	"VersionName": "0.17.1",
 	"FriendlyName": "Ready Player Me",
 	"Description": "Ready Player Me SDK",
 	"Category": "Runtime",
@@ -23,7 +23,18 @@
 				"Win64",
 				"Mac",
 				"Linux",
-				"Android"
+				"Android",
+				"IOS"
+			]
+		},
+		{
+			"Name": "ReadyPlayerMeEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
 			]
 		}
 	],

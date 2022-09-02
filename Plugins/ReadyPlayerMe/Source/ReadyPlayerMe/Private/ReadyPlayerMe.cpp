@@ -1,6 +1,9 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright © 2021++ Ready Player Me
 
 #include "ReadyPlayerMe.h"
+#include "ReadyPlayerMeTypes.h"
+
+DEFINE_LOG_CATEGORY(LogReadyPlayerMe);
 
 #define LOCTEXT_NAMESPACE "FReadyPlayerMeModule"
 
