@@ -22,6 +22,12 @@ namespace
 		}
 		return "";
 	}
+
+	FString GetDeviceId()
+	{
+		const TArray<uint8> MacAddr = FPlatformMisc::GetMacAddress();
+		return FMD5::HashBytes(MacAddr.GetData(), MacAddr.Num());
+	}
 }
 
 FReadyPlayerMeAnalyticsData::FReadyPlayerMeAnalyticsData()
@@ -33,6 +39,6 @@ FReadyPlayerMeAnalyticsData::FReadyPlayerMeAnalyticsData()
 	Subdomain = SUBDOMAIN;
 	UnrealVersion = FString::Printf(TEXT("%d.%d.%d"), EngineVersion.GetMajor(), EngineVersion.GetMinor(), EngineVersion.GetPatch());
 	Platform = UGameplayStatics::GetPlatformName();
-	DeviceId = UKismetSystemLibrary::GetDeviceId();
+	DeviceId = GetDeviceId();
 	AppIdentifier = UKismetSystemLibrary::GetGameBundleId();
 }

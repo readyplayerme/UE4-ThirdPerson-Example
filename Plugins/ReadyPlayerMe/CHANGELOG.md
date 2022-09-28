@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.17.1] 2022-09-01
+
+## Fixed
+
+- reverted short code base URL change
+- logic for device ID to fix developer metrics
+
 ## [0.17.0] 2022-08-23
 
 ## Added

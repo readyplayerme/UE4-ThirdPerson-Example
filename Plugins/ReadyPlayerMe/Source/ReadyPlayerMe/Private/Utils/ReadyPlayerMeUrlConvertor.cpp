@@ -4,7 +4,7 @@
 #include "Utils/ReadyPlayerMeUrlConvertor.h"
 #include "Internationalization/Regex.h"
 
-static const FString SHORTCODE_URL_PREFIX = "https://models.readyplayer.me/";
+static const FString SHORTCODE_URL_PREFIX = "https://readyplayer.me/api/avatar/";
 static const FString URL_PATTERN = "https?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,4}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)";
 static const FString SHORTCODE_PATTERN = "^[a-zA-Z0-9]*$";
 static const TCHAR* SUFFIX_GLB = TEXT(".glb");
@@ -25,8 +25,9 @@ FString FReadyPlayerMeUrlConvertor::GetUrlFromShortcode(const FString& Shortcode
 {
 	const FRegexPattern RegexPattern(SHORTCODE_PATTERN);
 	FRegexMatcher RegexMatcher(RegexPattern, Shortcode);
+	FString url = SHORTCODE_URL_PREFIX + Shortcode;
 
-	return RegexMatcher.FindNext() ? SHORTCODE_URL_PREFIX + Shortcode + SUFFIX_GLB : TEXT("");
+	return RegexMatcher.FindNext() ? SHORTCODE_URL_PREFIX + Shortcode : TEXT("");
 }
 
 bool FReadyPlayerMeUrlConvertor::IsUrl(const FString& Url)
@@ -50,7 +51,7 @@ FAvatarUri FReadyPlayerMeUrlConvertor::CreateAvatarUri(const FString& Url)
 	const FString UrlPath = Path + "/" + Guid;
 	FAvatarUri AvatarUri;
 	AvatarUri.Guid = Guid;
-	AvatarUri.ModelUrl = UrlPath + SUFFIX_GLB;
+	AvatarUri.ModelUrl = UrlLink;
 	AvatarUri.LocalModelPath = LocalFilename + SUFFIX_GLB;
 	AvatarUri.MetadataUrl = UrlPath + SUFFIX_JSON;
 	AvatarUri.LocalMetadataPath = LocalFilename + SUFFIX_JSON;
