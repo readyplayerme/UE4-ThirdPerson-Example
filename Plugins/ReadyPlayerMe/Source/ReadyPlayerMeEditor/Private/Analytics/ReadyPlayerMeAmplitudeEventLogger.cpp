@@ -9,7 +9,7 @@
 #include "Policies/CondensedJsonPrintPolicy.h"
 
 static const FString ENDPOINT = "https://analytics-sdk.readyplayer.me/";
-static const FString TARGET = "unreal";
+static const FString ANALYTICS_TARGET = "unreal";
 
 static const FString JSON_EVENTS = "events";
 static const FString JSON_TARGET = "target";
@@ -33,7 +33,13 @@ constexpr float REQUEST_TIMEOUT = 5.f;
 
 FReadyPlayerMeAmplitudeEventLogger::FReadyPlayerMeAmplitudeEventLogger()
 	: SessionId(FDateTime::Now().ToUnixTimestamp())
+	, AnalyticsTarget(ANALYTICS_TARGET)
 {
+}
+
+void FReadyPlayerMeAmplitudeEventLogger::SetAnalyticsTarget(const FString& Target)
+{
+	AnalyticsTarget = Target;
 }
 
 TSharedRef<FJsonObject> FReadyPlayerMeAmplitudeEventLogger::MakeUserPropertiesJson() const
@@ -80,11 +86,11 @@ void FReadyPlayerMeAmplitudeEventLogger::LogEvent(const FString& EventName, cons
 	SendEvent(EventJson);
 }
 
-void FReadyPlayerMeAmplitudeEventLogger::SendEvent(TSharedRef<FJsonObject> EventJson)
+void FReadyPlayerMeAmplitudeEventLogger::SendEvent(TSharedRef<FJsonObject> EventJson) const
 {
 	const auto JsonObject = MakeShared<FJsonObject>();
 	const TArray<TSharedPtr<FJsonValue>> Events { MakeShared<FJsonValueObject>(EventJson) };
-	JsonObject->SetStringField(JSON_TARGET, TARGET);
+	JsonObject->SetStringField(JSON_TARGET, AnalyticsTarget);
 	JsonObject->SetArrayField(JSON_EVENTS, Events);
 
 	const auto Content = JsonToString(JsonObject);
@@ -102,7 +108,7 @@ void FReadyPlayerMeAmplitudeEventLogger::SendHttpRequest(const FString& Url, con
 		{
 			if (!bSuccess || !Response.IsValid())
 			{
-				UE_LOG(LogTemp, Error, TEXT("Failed to send an analytical event"));
+				UE_LOG(LogTemp, Display, TEXT("Failed to send an analytical event"));
 			}
 		});
 	HttpRequest->ProcessRequest();

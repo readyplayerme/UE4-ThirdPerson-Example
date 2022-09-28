@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.18.0] 2022-09-28
+
+## Added
+
+- Avatar API configuration parameter support
+- Success callback for ReadyPlayerMeComponent
+- Avatar Loading cancellation
+
+## Fixed
+
+- Avatar caching support for Avatar API
+
 ## [0.17.1] 2022-09-01
 
 ## Fixed

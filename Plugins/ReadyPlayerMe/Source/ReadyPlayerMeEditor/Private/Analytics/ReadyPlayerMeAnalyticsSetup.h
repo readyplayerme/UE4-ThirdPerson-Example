@@ -4,10 +4,15 @@
 
 #include "CoreMinimal.h"
 
-class FReadyPlayerMeAnalyticsWidgetSetup
+class FReadyPlayerMeAnalyticsSetup
 {
 public:
 	static void Startup();
 	static void RemoveWidget();
 	static void AddWidget();
+
+private:
+	static void SetupLogger();
+	static void SetupWidget();
+	static void SetupSettingsChangedDelegate();
 };

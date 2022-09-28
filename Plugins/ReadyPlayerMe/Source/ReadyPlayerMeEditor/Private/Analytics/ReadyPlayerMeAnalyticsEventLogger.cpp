@@ -53,9 +53,13 @@ void FReadyPlayerMeAnalyticsEventLogger::SetEnabled(bool bEnabled)
 	bIsEnabled = bEnabled;
 }
 
+void FReadyPlayerMeAnalyticsEventLogger::SetAnalyticsTarget(const FString& Target)
+{
+	Logger.SetAnalyticsTarget(Target);
+}
+
 void FReadyPlayerMeAnalyticsEventLogger::EnableAnalytics()
 {
 	bIsEnabled = true;
 	Logger.LogEvent(EVENT_ALLOW_LOGGING, Logger.MakeUserPropertiesJson());
 }
-

@@ -8,12 +8,14 @@
 class FReadyPlayerMeAvatarStorage
 {
 public:
-	static bool SaveAvatar(const FString& GlbFilePath, const TArray<uint8>& Data);
-	static bool SaveMetadata(const FString& MetadataFilePath, const FString& Content);
+	static void SaveAvatar(const FString& GlbFilePath, const TArray<uint8>& Data);
+	static void SaveMetadata(const FString& MetadataFilePath, const FString& Content);
 	
 	static bool AvatarExists(const FAvatarUri& AvatarUri);
+	static bool FileExists(const FString& Path);
 	static FString LoadMetadata(const FString& Path);
 	static void ClearAvatarCache();
+	static void DeleteDirectory(const FString& Path);
 
 private:
 	static bool CheckAndRemoveExistingFile(const FString& FilePath);
