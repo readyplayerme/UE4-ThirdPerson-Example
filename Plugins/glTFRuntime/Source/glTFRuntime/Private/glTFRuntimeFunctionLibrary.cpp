@@ -1,8 +1,9 @@
-// Copyright 2020, Roberto De Ioris.
+// Copyright 2022, Roberto De Ioris.
 
 
 #include "glTFRuntimeFunctionLibrary.h"
 #include "HttpModule.h"
+#include "HAL/PlatformApplicationMisc.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
 
@@ -66,14 +67,50 @@ void UglTFRuntimeFunctionLibrary::glTFLoadAssetFromUrl(const FString& Url, const
 	}
 
 	HttpRequest->OnProcessRequestComplete().BindLambda([](FHttpRequestPtr RequestPtr, FHttpResponsePtr ResponsePtr, bool bSuccess, FglTFRuntimeHttpResponse Completed, const FglTFRuntimeConfig& LoaderConfig)
-	{
-		UglTFRuntimeAsset* Asset = nullptr;
-		if (bSuccess)
 		{
-			Asset = glTFLoadAssetFromData(ResponsePtr->GetContent(), LoaderConfig);
-		}
-		Completed.ExecuteIfBound(Asset);
-	}, Completed, LoaderConfig);
+			UglTFRuntimeAsset* Asset = nullptr;
+			if (bSuccess)
+			{
+				Asset = glTFLoadAssetFromData(ResponsePtr->GetContent(), LoaderConfig);
+			}
+			Completed.ExecuteIfBound(Asset);
+		}, Completed, LoaderConfig);
+
+	HttpRequest->ProcessRequest();
+}
+
+void UglTFRuntimeFunctionLibrary::glTFLoadAssetFromUrlWithProgress(const FString& Url, const TMap<FString, FString>& Headers, FglTFRuntimeHttpResponse Completed, FglTFRuntimeHttpProgress Progress, const FglTFRuntimeConfig& LoaderConfig)
+{
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 25
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+#else
+	TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+#endif
+	HttpRequest->SetURL(Url);
+	for (TPair<FString, FString> Header : Headers)
+	{
+		HttpRequest->AppendToHeader(Header.Key, Header.Value);
+	}
+
+	HttpRequest->OnProcessRequestComplete().BindLambda([](FHttpRequestPtr RequestPtr, FHttpResponsePtr ResponsePtr, bool bSuccess, FglTFRuntimeHttpResponse Completed, const FglTFRuntimeConfig& LoaderConfig)
+		{
+			UglTFRuntimeAsset* Asset = nullptr;
+			if (bSuccess)
+			{
+				Asset = glTFLoadAssetFromData(ResponsePtr->GetContent(), LoaderConfig);
+			}
+			Completed.ExecuteIfBound(Asset);
+		}, Completed, LoaderConfig);
+
+	HttpRequest->OnRequestProgress().BindLambda([](FHttpRequestPtr RequestPtr, int32 BytesSent, int32 BytesReceived, FglTFRuntimeHttpProgress Progress, const FglTFRuntimeConfig& LoaderConfig)
+		{
+			int32 ContentLength = 0;
+			if (RequestPtr->GetResponse().IsValid())
+			{
+				ContentLength = RequestPtr->GetResponse()->GetContentLength();
+			}
+			Progress.ExecuteIfBound(LoaderConfig, BytesReceived, ContentLength);
+		}, Progress, LoaderConfig);
 
 	HttpRequest->ProcessRequest();
 }
@@ -95,4 +132,70 @@ UglTFRuntimeAsset* UglTFRuntimeFunctionLibrary::glTFLoadAssetFromData(const TArr
 	}
 
 	return Asset;
+}
+
+bool UglTFRuntimeFunctionLibrary::glTFLoadAssetFromClipboard(FglTFRuntimeHttpResponse Completed, FString& ClipboardContent, const FglTFRuntimeConfig& LoaderConfig)
+{
+
+	FString Url;
+	FPlatformApplicationMisc::ClipboardPaste(Url);
+
+	if (Url.IsEmpty())
+	{
+		return false;
+	}
+
+	// escaped?
+	if (Url.StartsWith("\"") && Url.EndsWith("\""))
+	{
+		Url = Url.RightChop(1).LeftChop(1);
+	}
+
+	ClipboardContent = Url;
+
+	if (Url.Contains("://"))
+	{
+		glTFLoadAssetFromUrl(Url, {}, Completed, LoaderConfig);
+		return true;
+	}
+
+	UglTFRuntimeAsset* Asset = glTFLoadAssetFromFilename(Url, false, LoaderConfig);
+	Completed.ExecuteIfBound(Asset);
+
+	return Asset != nullptr;
+}
+
+TArray<FglTFRuntimePathItem> UglTFRuntimeFunctionLibrary::glTFRuntimePathItemArrayFromJSONPath(const FString& JSONPath)
+{
+	TArray<FglTFRuntimePathItem> Paths;
+	TArray<FString> Keys;
+	JSONPath.ParseIntoArray(Keys, TEXT("."));
+
+	for (const FString& Key : Keys)
+	{
+		FString PathKey = Key;
+		int32 PathIndex = -1;
+
+		int32 SquareBracketStart = 0;
+		int32 SquareBracketEnd = 0;
+		if (Key.FindChar('[', SquareBracketStart))
+		{
+			if (Key.FindChar(']', SquareBracketEnd))
+			{
+				if (SquareBracketEnd > SquareBracketStart)
+				{
+					const FString KeyIndex = Key.Mid(SquareBracketStart + 1, SquareBracketEnd - SquareBracketEnd);
+					PathIndex = FCString::Atoi(*KeyIndex);
+					PathKey = Key.Left(SquareBracketStart);
+				}
+			}
+		}
+
+		FglTFRuntimePathItem PathItem;
+		PathItem.Path = PathKey;
+		PathItem.Index = PathIndex;
+		Paths.Add(PathItem);
+	}
+
+	return Paths;
 }

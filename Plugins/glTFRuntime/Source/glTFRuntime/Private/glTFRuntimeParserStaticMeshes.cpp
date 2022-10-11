@@ -1,7 +1,9 @@
-// Copyright 2020-2021, Roberto De Ioris.
+// Copyright 2020-2022, Roberto De Ioris.
 
 #include "glTFRuntimeParser.h"
 #include "Async/Async.h"
+#include "MeshDescription.h"
+#include "StaticMeshAttributes.h"
 #include "StaticMeshOperations.h"
 #include "Engine/StaticMeshSocket.h"
 #if WITH_EDITOR
@@ -183,10 +185,8 @@ UStaticMesh* FglTFRuntimeParser::LoadStaticMesh_Internal(TSharedRef<FglTFRuntime
 
 #if ENGINE_MAJOR_VERSION > 4
 				StaticMeshVertex.Position = FVector3f(GetSafeValue(Primitive.Positions, VertexIndex, FVector::ZeroVector, bMissingIgnore));
-				BoundingBox += FVector(StaticMeshVertex.Position);
 #else
 				StaticMeshVertex.Position = GetSafeValue(Primitive.Positions, VertexIndex, FVector::ZeroVector, bMissingIgnore);
-				BoundingBox += StaticMeshVertex.Position;
 #endif
 
 				FVector4 TangentX = GetSafeValue(Primitive.Tangents, VertexIndex, FVector4(0, 0, 0, 1), bMissingTangents);
@@ -228,18 +228,22 @@ UStaticMesh* FglTFRuntimeParser::LoadStaticMesh_Internal(TSharedRef<FglTFRuntime
 				{
 #if ENGINE_MAJOR_VERSION > 4
 					StaticMeshVertex.Position = FVector3f(LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformPosition(FVector3d(StaticMeshVertex.Position)));
-					BoundingBox += FVector(StaticMeshVertex.Position);
-					StaticMeshVertex.TangentX = FVector3f(LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVector(FVector3d(StaticMeshVertex.TangentX)));
-					StaticMeshVertex.TangentY = FVector3f(LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVector(FVector3d(StaticMeshVertex.TangentY)));
-					StaticMeshVertex.TangentZ = FVector3f(LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVector(FVector3d(StaticMeshVertex.TangentZ)));
+					StaticMeshVertex.TangentX = FVector3f(LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVectorNoScale(FVector3d(StaticMeshVertex.TangentX)));
+					StaticMeshVertex.TangentY = FVector3f(LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVectorNoScale(FVector3d(StaticMeshVertex.TangentY)));
+					StaticMeshVertex.TangentZ = FVector3f(LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVectorNoScale(FVector3d(StaticMeshVertex.TangentZ)));
 #else
 					StaticMeshVertex.Position = LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformPosition(StaticMeshVertex.Position);
-					BoundingBox += StaticMeshVertex.Position;
-					StaticMeshVertex.TangentX = LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVector(StaticMeshVertex.TangentX);
-					StaticMeshVertex.TangentY = LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVector(StaticMeshVertex.TangentY);
-					StaticMeshVertex.TangentZ = LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVector(StaticMeshVertex.TangentZ);
+					StaticMeshVertex.TangentX = LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVectorNoScale(StaticMeshVertex.TangentX);
+					StaticMeshVertex.TangentY = LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVectorNoScale(StaticMeshVertex.TangentY);
+					StaticMeshVertex.TangentZ = LOD->AdditionalTransforms[AdditionalTransformsPrimitiveIndex].TransformVectorNoScale(StaticMeshVertex.TangentZ);
 #endif
 				}
+
+#if ENGINE_MAJOR_VERSION > 4
+				BoundingBox += FVector(StaticMeshVertex.Position);
+#else
+				BoundingBox += StaticMeshVertex.Position;
+#endif
 			}
 			// End of Geometry generation
 
@@ -441,6 +445,87 @@ UStaticMesh* FglTFRuntimeParser::LoadStaticMesh_Internal(TSharedRef<FglTFRuntime
 			LODResources.IndexBuffer = FRawStaticIndexBuffer(true);
 		}
 		LODResources.IndexBuffer.SetIndices(LODIndices, EIndexBufferStride::Force32Bit);
+
+#if WITH_EDITOR
+		if (StaticMeshConfig.bGenerateStaticMeshDescription)
+		{
+			FStaticMeshSourceModel& SourceModel = StaticMesh->AddSourceModel();
+			FMeshDescription* MeshDescription = StaticMesh->CreateMeshDescription(CurrentLODIndex);
+			FStaticMeshAttributes StaticMeshAttributes(*MeshDescription);
+#if ENGINE_MAJOR_VERSION > 4
+
+			TVertexAttributesRef<FVector3f> MeshDescriptionPositions = MeshDescription->GetVertexPositions();
+			TVertexInstanceAttributesRef<FVector3f> VertexInstanceNormals = StaticMeshAttributes.GetVertexInstanceNormals();
+			TVertexInstanceAttributesRef<FVector3f> VertexInstanceTangents = StaticMeshAttributes.GetVertexInstanceTangents();
+			TVertexInstanceAttributesRef<FVector2f> VertexInstanceUVs = StaticMeshAttributes.GetVertexInstanceUVs();
+			TVertexInstanceAttributesRef<FVector4f> VertexInstanceColors = StaticMeshAttributes.GetVertexInstanceColors();
+#else
+			TVertexAttributesRef<FVector> MeshDescriptionPositions = StaticMeshAttributes.GetVertexPositions();
+			TVertexInstanceAttributesRef<FVector> VertexInstanceNormals = StaticMeshAttributes.GetVertexInstanceNormals();
+			TVertexInstanceAttributesRef<FVector> VertexInstanceTangents = StaticMeshAttributes.GetVertexInstanceTangents();
+			TVertexInstanceAttributesRef<FVector2D> VertexInstanceUVs = StaticMeshAttributes.GetVertexInstanceUVs();
+			TVertexInstanceAttributesRef<FVector4> VertexInstanceColors = StaticMeshAttributes.GetVertexInstanceColors();
+#endif
+
+			for (int32 PositionIndex = 0; PositionIndex < StaticMeshBuildVertices.Num(); PositionIndex++)
+			{
+				MeshDescription->CreateVertexWithID(FVertexID(PositionIndex));
+				MeshDescriptionPositions[FVertexID(PositionIndex)] = StaticMeshBuildVertices[PositionIndex].Position;
+			}
+
+			TArray<TPair<uint32, FPolygonGroupID>> PolygonGroups;
+			for (const FStaticMeshSection& Section : LODResources.Sections)
+			{
+				const FPolygonGroupID PolygonGroupID = MeshDescription->CreatePolygonGroup();
+				PolygonGroups.Add(TPair<uint32, FPolygonGroupID>(Section.FirstIndex, PolygonGroupID));
+			}
+
+			int32 CurrentPolygonGroupIndex = 0;
+			uint32 CleanedNumOfIndices = (LODIndices.Num() / 3) * 3; // avoid crash on non triangles...
+			for (uint32 VertexIndex = 0; VertexIndex < CleanedNumOfIndices; VertexIndex += 3)
+			{
+				const FVertexInstanceID VertexInstanceID0 = MeshDescription->CreateVertexInstance(FVertexID(LODIndices[VertexIndex]));;
+				const FVertexInstanceID VertexInstanceID1 = MeshDescription->CreateVertexInstance(FVertexID(LODIndices[VertexIndex + 1]));
+				const FVertexInstanceID VertexInstanceID2 = MeshDescription->CreateVertexInstance(FVertexID(LODIndices[VertexIndex + 2]));
+
+				VertexInstanceNormals[VertexInstanceID0] = StaticMeshBuildVertices[LODIndices[VertexIndex]].TangentZ;
+				VertexInstanceTangents[VertexInstanceID0] = StaticMeshBuildVertices[LODIndices[VertexIndex]].TangentX;
+				VertexInstanceNormals[VertexInstanceID1] = StaticMeshBuildVertices[LODIndices[VertexIndex + 1]].TangentZ;
+				VertexInstanceTangents[VertexInstanceID1] = StaticMeshBuildVertices[LODIndices[VertexIndex + 1]].TangentX;
+				VertexInstanceNormals[VertexInstanceID2] = StaticMeshBuildVertices[LODIndices[VertexIndex + 2]].TangentZ;
+				VertexInstanceTangents[VertexInstanceID2] = StaticMeshBuildVertices[LODIndices[VertexIndex + 2]].TangentX;
+
+				for (int32 UVIndex = 0; UVIndex < NumUVs; UVIndex++)
+				{
+					VertexInstanceUVs.Set(VertexInstanceID0, UVIndex, StaticMeshBuildVertices[LODIndices[VertexIndex]].UVs[UVIndex]);
+					VertexInstanceUVs.Set(VertexInstanceID1, UVIndex, StaticMeshBuildVertices[LODIndices[VertexIndex + 1]].UVs[UVIndex]);
+					VertexInstanceUVs.Set(VertexInstanceID2, UVIndex, StaticMeshBuildVertices[LODIndices[VertexIndex + 2]].UVs[UVIndex]);
+				}
+
+				if (bHasVertexColors)
+				{
+					VertexInstanceColors[VertexInstanceID0] = FLinearColor(StaticMeshBuildVertices[LODIndices[VertexIndex]].Color);
+					VertexInstanceColors[VertexInstanceID1] = FLinearColor(StaticMeshBuildVertices[LODIndices[VertexIndex + 1]].Color);
+					VertexInstanceColors[VertexInstanceID2] = FLinearColor(StaticMeshBuildVertices[LODIndices[VertexIndex + 2]].Color);
+				}
+
+				// safe approach given that the section array is built in order
+				if (CurrentPolygonGroupIndex + 1 < PolygonGroups.Num())
+				{
+					if (VertexIndex >= PolygonGroups[CurrentPolygonGroupIndex + 1].Key)
+					{
+						CurrentPolygonGroupIndex++;
+					}
+				}
+				const FPolygonGroupID PolygonGroupID = PolygonGroups[CurrentPolygonGroupIndex].Value;
+
+				MeshDescription->CreateTriangle(PolygonGroupID, { VertexInstanceID0, VertexInstanceID1, VertexInstanceID2 });
+			}
+
+			StaticMesh->CommitMeshDescription(CurrentLODIndex);
+
+		}
+#endif
 	}
 
 	return StaticMesh;
@@ -500,12 +585,12 @@ UStaticMesh* FglTFRuntimeParser::FinalizeStaticMesh(TSharedRef<FglTFRuntimeStati
 #endif
 	}
 
-	if (!StaticMesh->bAllowCPUAccess)
-	{
-		BodySetup->bNeverNeedsCookedCollisionData = true;
-	}
+	BodySetup->bHasCookedCollisionData = false;
+
+	BodySetup->bNeverNeedsCookedCollisionData = !StaticMeshConfig.bBuildComplexCollision;
 
 	BodySetup->bMeshCollideAll = false;
+	BodySetup->bHasCookedCollisionData = false;
 	BodySetup->CollisionTraceFlag = StaticMeshConfig.CollisionComplexity;
 
 	BodySetup->InvalidatePhysicsData();
@@ -539,7 +624,20 @@ UStaticMesh* FglTFRuntimeParser::FinalizeStaticMesh(TSharedRef<FglTFRuntimeStati
 		BodySetup->AggGeom.SphereElems.Add(SphereElem);
 	}
 
-	BodySetup->CreatePhysicsMeshes();
+	if (StaticMeshConfig.bBuildComplexCollision || StaticMeshConfig.CollisionComplexity == ECollisionTraceFlag::CTF_UseComplexAsSimple)
+	{
+		if (!StaticMesh->bAllowCPUAccess || !StaticMeshConfig.Outer || !StaticMesh->GetWorld() || !StaticMesh->GetWorld()->IsGameWorld())
+		{
+			AddError("FinalizeStaticMesh", "Unable to generate Complex collision without CpuAccess and a valid StaticMesh Outer (consider setting it to the related StaticMeshComponent)");
+		}
+		BodySetup->CreatePhysicsMeshes();
+	}
+
+	// recreate physics state (if possible)
+	if (UActorComponent* ActorComponent = Cast<UActorComponent>(StaticMesh->GetOuter()))
+	{
+		ActorComponent->RecreatePhysicsState();
+	}
 
 	for (const TPair<FString, FTransform>& Pair : StaticMeshConfig.Sockets)
 	{
@@ -558,6 +656,8 @@ UStaticMesh* FglTFRuntimeParser::FinalizeStaticMesh(TSharedRef<FglTFRuntimeStati
 		Socket->RelativeLocation = -StaticMeshContext->LOD0PivotDelta;
 		StaticMesh->AddSocket(Socket);
 	}
+
+	OnFinalizedStaticMesh.Broadcast(AsShared(), StaticMesh, StaticMeshConfig);
 
 	if (OnStaticMeshCreated.IsBound())
 	{

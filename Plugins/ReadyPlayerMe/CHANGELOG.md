@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.18.1] 2022-10-07
+
+## Fixed
+
+- Updated glTFRuntime plugin to the version 20220823
+
 ## [0.18.0] 2022-09-28
 
 ## Added

@@ -481,31 +481,37 @@ UMaterialInterface* UglTFRuntimeAsset::LoadMaterial(const int32 MaterialIndex, c
 	return Parser->LoadMaterial(MaterialIndex, MaterialsConfig, bUseVertexColors, MaterialName);
 }
 
-FString UglTFRuntimeAsset::GetStringFromPath(const TArray<FglTFRuntimePathItem> Path, bool& bFound) const
+UAnimSequence* UglTFRuntimeAsset::CreateSkeletalAnimationFromPath(USkeletalMesh* SkeletalMesh, const TArray<FglTFRuntimePathItem>& BonesPath, const TArray<FglTFRuntimePathItem>& MorphTargetsPath, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+{
+	GLTF_CHECK_PARSER(nullptr);
+	return Parser->CreateSkeletalAnimationFromPath(SkeletalMesh, BonesPath, MorphTargetsPath, SkeletalAnimationConfig);
+}
+
+FString UglTFRuntimeAsset::GetStringFromPath(const TArray<FglTFRuntimePathItem>& Path, bool& bFound) const
 {
 	GLTF_CHECK_PARSER("");
 	return Parser->GetJSONStringFromPath(Path, bFound);
 }
 
-int64 UglTFRuntimeAsset::GetIntegerFromPath(const TArray<FglTFRuntimePathItem> Path, bool& bFound) const
+int64 UglTFRuntimeAsset::GetIntegerFromPath(const TArray<FglTFRuntimePathItem>& Path, bool& bFound) const
 {
 	GLTF_CHECK_PARSER(0);
 	return static_cast<int64>(Parser->GetJSONNumberFromPath(Path, bFound));
 }
 
-float UglTFRuntimeAsset::GetFloatFromPath(const TArray<FglTFRuntimePathItem> Path, bool& bFound) const
+float UglTFRuntimeAsset::GetFloatFromPath(const TArray<FglTFRuntimePathItem>& Path, bool& bFound) const
 {
 	GLTF_CHECK_PARSER(0);
 	return static_cast<float>(Parser->GetJSONNumberFromPath(Path, bFound));
 }
 
-bool UglTFRuntimeAsset::GetBooleanFromPath(const TArray<FglTFRuntimePathItem> Path, bool& bFound) const
+bool UglTFRuntimeAsset::GetBooleanFromPath(const TArray<FglTFRuntimePathItem>& Path, bool& bFound) const
 {
 	GLTF_CHECK_PARSER(false);
 	return Parser->GetJSONBooleanFromPath(Path, bFound);
 }
 
-int32 UglTFRuntimeAsset::GetArraySizeFromPath(const TArray<FglTFRuntimePathItem> Path, bool& bFound) const
+int32 UglTFRuntimeAsset::GetArraySizeFromPath(const TArray<FglTFRuntimePathItem>& Path, bool& bFound) const
 {
 	GLTF_CHECK_PARSER(-1);
 	return Parser->GetJSONArraySizeFromPath(Path, bFound);
@@ -575,6 +581,30 @@ UTexture2D* UglTFRuntimeAsset::LoadImage(const int32 ImageIndex, const FglTFRunt
 	return nullptr;
 }
 
+UTexture2D* UglTFRuntimeAsset::LoadImageFromBlob(const FglTFRuntimeImagesConfig& ImagesConfig)
+{
+	GLTF_CHECK_PARSER(nullptr);
+	TArray64<uint8> UncompressedBytes;
+	int32 Width = 0;
+	int32 Height = 0;
+	if (!Parser->LoadImageFromBlob(Parser->GetBlob(), MakeShared<FJsonObject>(), UncompressedBytes, Width, Height, ImagesConfig))
+	{
+		return nullptr;
+	}
+
+	if (Width > 0 && Height > 0)
+	{
+		FglTFRuntimeMipMap Mip(-1);
+		Mip.Pixels = UncompressedBytes;
+		Mip.Width = Width;
+		Mip.Height = Height;
+		TArray<FglTFRuntimeMipMap> Mips = { Mip };
+		return Parser->BuildTexture(this, Mips, ImagesConfig, FglTFRuntimeTextureSampler());
+	}
+
+	return nullptr;
+}
+
 TArray<FString> UglTFRuntimeAsset::GetExtensionsUsed() const
 {
 	GLTF_CHECK_PARSER(TArray<FString>());
@@ -593,10 +623,10 @@ TArray<FString> UglTFRuntimeAsset::GetMaterialsVariants() const
 	return Parser->MaterialsVariants;
 }
 
-UAnimSequence* UglTFRuntimeAsset::CreateAnimationFromPose(USkeletalMesh* SkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig)
+UAnimSequence* UglTFRuntimeAsset::CreateAnimationFromPose(USkeletalMesh* SkeletalMesh, const FglTFRuntimeSkeletalAnimationConfig& SkeletalAnimationConfig, const int32 SkinIndex)
 {
 	GLTF_CHECK_PARSER(nullptr);
-	return Parser->CreateAnimationFromPose(SkeletalMesh, SkeletalAnimationConfig);
+	return Parser->CreateAnimationFromPose(SkeletalMesh, SkinIndex, SkeletalAnimationConfig);
 }
 
 bool UglTFRuntimeAsset::LoadMeshAsRuntimeLOD(const int32 MeshIndex, FglTFRuntimeMeshLOD& RuntimeLOD, const FglTFRuntimeMaterialsConfig& MaterialsConfig)
@@ -623,4 +653,125 @@ USkeletalMesh* UglTFRuntimeAsset::LoadSkeletalMeshFromRuntimeLODs(const TArray<F
 {
 	GLTF_CHECK_PARSER(nullptr);
 	return Parser->LoadSkeletalMeshFromRuntimeLODs(RuntimeLODs, SkinIndex, SkeletalMeshConfig);
+}
+
+bool UglTFRuntimeAsset::GetStringMapFromExtras(const FString& Key, TMap<FString, FString>& StringMap) const
+{
+	GLTF_CHECK_PARSER(false);
+	return Parser->GetStringMapFromExtras(Key, StringMap);
+}
+
+bool UglTFRuntimeAsset::GetStringArrayFromExtras(const FString& Key, TArray<FString>& StringArray) const
+{
+	GLTF_CHECK_PARSER(false);
+	return Parser->GetStringArrayFromExtras(Key, StringArray);
+}
+
+bool UglTFRuntimeAsset::GetNumberFromExtras(const FString& Key, float& Value) const
+{
+	GLTF_CHECK_PARSER(false);
+	return Parser->GetNumberFromExtras(Key, Value);
+}
+
+bool UglTFRuntimeAsset::GetStringFromExtras(const FString& Key, FString& Value) const
+{
+	GLTF_CHECK_PARSER(false);
+	return Parser->GetStringFromExtras(Key, Value);
+}
+
+bool UglTFRuntimeAsset::GetBooleanFromExtras(const FString& Key, bool& Value) const
+{
+	GLTF_CHECK_PARSER(false);
+	return Parser->GetBooleanFromExtras(Key, Value);
+}
+
+bool UglTFRuntimeAsset::GetNodeGPUInstancingTransforms(const int32 NodeIndex, TArray<FTransform>& Transforms)
+{
+	GLTF_CHECK_PARSER(false);
+
+	TSharedPtr<FJsonObject> InstancingExtension = Parser->GetNodeExtensionObject(NodeIndex, "EXT_mesh_gpu_instancing");
+	if (!InstancingExtension)
+	{
+		return false;
+	}
+
+	TSharedPtr<FJsonObject> InstancingExtensionAttributes = Parser->GetJsonObjectFromObject(InstancingExtension.ToSharedRef(), "attributes");
+	if (!InstancingExtensionAttributes)
+	{
+		return false;
+	}
+
+	TArray<FVector> Translations;
+	TArray<FVector4> Rotations;
+	TArray<FVector> Scales;
+
+	if (Parser->BuildFromAccessorField(InstancingExtensionAttributes.ToSharedRef(), "TRANSLATION", Translations, { 3 }, { 5126 }, false, [](FVector V) { return V; }, INDEX_NONE))
+	{
+		Transforms.AddUninitialized(Translations.Num());
+		for (int32 Index = 0; Index < Translations.Num(); Index++)
+		{
+			Transforms[Index].SetTranslation(Translations[Index]);
+		}
+	}
+
+	if (Parser->BuildFromAccessorField(InstancingExtensionAttributes.ToSharedRef(), "ROTATION", Rotations, { 4 }, { 5126, 5120, 5122 }, true, [](FVector4 Q) { return Q; }, INDEX_NONE))
+	{
+		if (Transforms.Num() == 0)
+		{
+			Transforms.AddUninitialized(Rotations.Num());
+		}
+		else if (Transforms.Num() != Rotations.Num())
+		{
+			return false;
+		}
+
+		for (int32 Index = 0; Index < Rotations.Num(); Index++)
+		{
+			Transforms[Index].SetRotation(FQuat(Rotations[Index].X, Rotations[Index].Y, Rotations[Index].Z, Rotations[Index].W));
+		}
+	}
+
+	if (Parser->BuildFromAccessorField(InstancingExtensionAttributes.ToSharedRef(), "SCALE", Scales, { 3 }, { 5126 }, false, [](FVector V) { return V; }, INDEX_NONE))
+	{
+		if (Transforms.Num() == 0)
+		{
+			Transforms.AddUninitialized(Scales.Num());
+		}
+		else if (Transforms.Num() != Scales.Num())
+		{
+			return false;
+		}
+
+		for (int32 Index = 0; Index < Scales.Num(); Index++)
+		{
+			Transforms[Index].SetScale3D(Scales[Index]);
+		}
+	}
+
+	// the extension is present but no attribute is defined (still valid)
+	if (Transforms.Num() <= 0)
+	{
+		return true;
+	}
+
+	for (int32 Index = 0; Index < Scales.Num(); Index++)
+	{
+		Transforms[Index] = Parser->RebaseTransform(Transforms[Index]);
+	}
+
+	return true;
+}
+
+bool UglTFRuntimeAsset::GetNodeExtensionIndices(const int32 NodeIndex, const FString& ExtensionName, const FString& FieldName, TArray<int32>& Indices)
+{
+	GLTF_CHECK_PARSER(false);
+
+	TSharedPtr<FJsonObject> NodeObject = Parser->GetNodeObject(NodeIndex);
+	if (!NodeObject)
+	{
+		return false;
+	}
+
+	Indices = Parser->GetJsonExtensionObjectIndices(NodeObject.ToSharedRef(), ExtensionName, FieldName);
+	return true;
 }

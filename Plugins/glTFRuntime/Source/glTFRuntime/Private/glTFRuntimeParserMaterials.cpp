@@ -1,7 +1,6 @@
-// Copyright 2022, Roberto De Ioris.
+// Copyright 2020-2022, Roberto De Ioris.
 
 #include "glTFRuntimeParser.h"
-#include "glTFRuntimeImageLoader.h"
 #include "IImageWrapperModule.h"
 #include "IImageWrapper.h"
 #include "ImageUtils.h"
@@ -202,6 +201,34 @@ UMaterialInterface* FglTFRuntimeParser::LoadMaterial_Internal(const int32 Index,
 
 			RuntimeMaterial.bKHR_materials_transmission = true;
 		}
+
+		// KHR_materials_unlit 
+		const TSharedPtr<FJsonObject>* JsonMaterialUnlit;
+		if ((*JsonExtensions)->TryGetObjectField("KHR_materials_unlit", JsonMaterialUnlit))
+		{
+			RuntimeMaterial.bKHR_materials_unlit = true;
+		}
+
+		// KHR_materials_ior
+		const TSharedPtr<FJsonObject>* JsonMaterialIOR;
+		if ((*JsonExtensions)->TryGetObjectField("KHR_materials_ior", JsonMaterialIOR))
+		{
+			if (!(*JsonMaterialIOR)->TryGetNumberField("ior", RuntimeMaterial.IOR))
+			{
+				RuntimeMaterial.IOR = 1.5;
+			}
+			RuntimeMaterial.bHasIOR = true;
+		}
+
+		// KHR_materials_specular
+		const TSharedPtr<FJsonObject>* JsonMaterialSpecular;
+		if ((*JsonExtensions)->TryGetObjectField("KHR_materials_specular", JsonMaterialSpecular))
+		{
+			if (!(*JsonMaterialSpecular)->TryGetNumberField("specularFactor", RuntimeMaterial.BaseSpecularFactor))
+			{
+				RuntimeMaterial.BaseSpecularFactor = 1;
+			}
+		}
 	}
 
 	if (IsInGameThread())
@@ -313,6 +340,22 @@ UMaterialInterface* FglTFRuntimeParser::BuildMaterial(const int32 Index, const F
 		if (SpecularGlossinessMaterialsMap.Contains(RuntimeMaterial.MaterialType))
 		{
 			BaseMaterial = SpecularGlossinessMaterialsMap[RuntimeMaterial.MaterialType];
+		}
+	}
+
+	if (RuntimeMaterial.bKHR_materials_transmission)
+	{
+		if (TransmissionMaterialsMap.Contains(RuntimeMaterial.MaterialType))
+		{
+			BaseMaterial = TransmissionMaterialsMap[RuntimeMaterial.MaterialType];
+		}
+	}
+
+	if (RuntimeMaterial.bKHR_materials_unlit)
+	{
+		if (UnlitMaterialsMap.Contains(RuntimeMaterial.MaterialType))
+		{
+			BaseMaterial = UnlitMaterialsMap[RuntimeMaterial.MaterialType];
 		}
 	}
 
@@ -453,6 +496,8 @@ UMaterialInterface* FglTFRuntimeParser::BuildMaterial(const int32 Index, const F
 	Material->SetScalarParameterValue("bUseVertexColors", (bUseVertexColors && !MaterialsConfig.bDisableVertexColors) ? 1.0f : 0.0f);
 	Material->SetScalarParameterValue("AlphaMask", RuntimeMaterial.bMasked ? 1.0f : 0.0f);
 
+	ApplyMaterialFloatFactor(RuntimeMaterial.bHasIOR, "ior", RuntimeMaterial.IOR);
+
 	for (const TPair<FString, float>& Pair : MaterialsConfig.ParamsMultiplier)
 	{
 		float ScalarValue = 0;
@@ -468,6 +513,48 @@ UMaterialInterface* FglTFRuntimeParser::BuildMaterial(const int32 Index, const F
 	}
 
 	return Material;
+}
+
+bool FglTFRuntimeParser::LoadImageFromBlob(TArray64<uint8>& Blob, TSharedRef<FJsonObject> JsonImageObject, TArray64<uint8>& UncompressedBytes, int32& Width, int32& Height, const FglTFRuntimeImagesConfig& ImagesConfig)
+{
+	OnTexturePixels.Broadcast(AsShared(), JsonImageObject, Blob, Width, Height, UncompressedBytes);
+
+	if (UncompressedBytes.Num() > 0)
+	{
+		return true;
+	}
+
+	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
+
+	EImageFormat ImageFormat = ImageWrapperModule.DetectImageFormat(Blob.GetData(), Blob.Num());
+	if (ImageFormat == EImageFormat::Invalid)
+	{
+		AddError("LoadImageFromBlob()", "Unable to detect image format");
+		return false;
+	}
+
+	TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(ImageFormat);
+	if (!ImageWrapper.IsValid())
+	{
+		AddError("LoadImageFromBlob()", "Unable to create ImageWrapper");
+		return false;
+	}
+	if (!ImageWrapper->SetCompressed(Blob.GetData(), Blob.Num()))
+	{
+		AddError("LoadImageFromBlob()", "Unable to parse image data");
+		return false;
+	}
+
+	if (!ImageWrapper->GetRaw(ERGBFormat::BGRA, 8, UncompressedBytes))
+	{
+		AddError("LoadImageFromBlob()", "Unable to get raw image data");
+		return false;
+	}
+
+	Width = ImageWrapper->GetWidth();
+	Height = ImageWrapper->GetHeight();
+
+	return true;
 }
 
 bool FglTFRuntimeParser::LoadImage(const int32 ImageIndex, TArray64<uint8>& UncompressedBytes, int32& Width, int32& Height, const FglTFRuntimeImagesConfig& ImagesConfig)
@@ -487,57 +574,7 @@ bool FglTFRuntimeParser::LoadImage(const int32 ImageIndex, TArray64<uint8>& Unco
 		return false;
 	}
 
-	for (TSubclassOf<UglTFRuntimeImageLoader> ImageLoaderClass : ImagesConfig.AdditionalImageLoaders)
-	{
-		// maybe overengineering but avoids custom loaders making mess
-		UncompressedBytes.Empty();
-		Width = 0;
-		Height = 0;
-		UglTFRuntimeImageLoader* ImageLoader = NewObject<UglTFRuntimeImageLoader>(GetTransientPackage(), ImageLoaderClass);
-		if (ImageLoader)
-		{
-			if (ImageLoader->LoadImage(AsShared(), ImageIndex, JsonImageObject.ToSharedRef(), Bytes, UncompressedBytes, Width, Height))
-			{
-				return true;
-			}
-		}
-		else
-		{
-			AddError("LoadImage()", FString::Printf(TEXT("Unable to instantiate glTFRuntimeImageLoader %s"), *ImageLoaderClass->GetName()));
-		}
-	}
-
-	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
-
-	EImageFormat ImageFormat = ImageWrapperModule.DetectImageFormat(Bytes.GetData(), Bytes.Num());
-	if (ImageFormat == EImageFormat::Invalid)
-	{
-		AddError("LoadImage()", "Unable to detect image format");
-		return false;
-	}
-
-	TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(ImageFormat);
-	if (!ImageWrapper.IsValid())
-	{
-		AddError("LoadImage()", "Unable to create ImageWrapper");
-		return false;
-	}
-	if (!ImageWrapper->SetCompressed(Bytes.GetData(), Bytes.Num()))
-	{
-		AddError("LoadImage()", "Unable to parse image data");
-		return false;
-	}
-
-	if (!ImageWrapper->GetRaw(ERGBFormat::BGRA, 8, UncompressedBytes))
-	{
-		AddError("LoadImage()", "Unable to get raw image data");
-		return false;
-	}
-
-	Width = ImageWrapper->GetWidth();
-	Height = ImageWrapper->GetHeight();
-
-	return true;
+	return LoadImageFromBlob(Bytes, JsonImageObject.ToSharedRef(), UncompressedBytes, Width, Height, ImagesConfig);
 }
 
 UTexture2D* FglTFRuntimeParser::LoadTexture(const int32 TextureIndex, TArray<FglTFRuntimeMipMap>& Mips, const bool sRGB, const FglTFRuntimeMaterialsConfig& MaterialsConfig, FglTFRuntimeTextureSampler& Sampler)

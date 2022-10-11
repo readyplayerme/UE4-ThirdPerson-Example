@@ -27,6 +27,7 @@ FglTFRuntimeSkeletalMeshConfig FReadyPlayerMeGlTFConfigCreator::GetGlTFRuntimeSk
 	RuntimeSkeletalMeshConfig.SkeletonConfig = GetGlTFRuntimeSkeletonConfig(RootBoneName, Skeleton);
 	RuntimeSkeletalMeshConfig.MorphTargetsDuplicateStrategy = EglTFRuntimeMorphTargetsDuplicateStrategy::Merge;
 	RuntimeSkeletalMeshConfig.MaterialsConfig = GetGlTFRuntimeMaterialsConfig();
+	RuntimeSkeletalMeshConfig.bAddVirtualBones = true;
 	if (Skeleton)
 	{
 		RuntimeSkeletalMeshConfig.Skeleton = Skeleton;
