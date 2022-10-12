@@ -21,6 +21,9 @@ public:
 	UPROPERTY(Config)
 	bool bDontAskAgain;
 
+	UPROPERTY(Config)
+	FString AnalyticsTarget;
+
 	UFUNCTION(BlueprintCallable, Category = "Analytics Privacy")
 	static void EnableAnalytics();
 

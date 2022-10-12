@@ -14,6 +14,7 @@ public:
 	void LogCloseProject() const;
 	void LogEnableAvatarCaching(bool bEnabled) const;
 	void SetEnabled(bool bEnabled);
+	void SetAnalyticsTarget(const FString& Target);
 	void EnableAnalytics();
 
 private:

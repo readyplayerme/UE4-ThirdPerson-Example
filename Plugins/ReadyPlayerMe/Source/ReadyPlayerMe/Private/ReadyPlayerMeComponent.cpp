@@ -14,38 +14,43 @@
 UReadyPlayerMeComponent::UReadyPlayerMeComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	OnAvatarLoadCompleted.BindDynamic(this, &UReadyPlayerMeComponent::OnAvatarLoaded);
+	OnAvatarDownloadCompleted.BindDynamic(this, &UReadyPlayerMeComponent::OnAvatarDownloaded);
 	OnSkeletalMeshCallback.BindDynamic(this, &UReadyPlayerMeComponent::OnSkeletalMeshLoaded);
 }
 
-void UReadyPlayerMeComponent::LoadAvatar(const FAvatarLoadFailed& OnLoadFailed)
+void UReadyPlayerMeComponent::LoadAvatar(const FAvatarLoadCompleted& OnLoadCompleted, const FAvatarLoadFailed& OnLoadFailed)
 {
 	if (!TargetSkeleton)
 	{
 		(void)OnLoadFailed.ExecuteIfBound("No target skeleton set");
 		return;
 	}
-	const bool bShouldLoadMetadata = FReadyPlayerMeUrlConvertor::IsUrl(UrlShortcode);
-
-	UrlShortcode = FReadyPlayerMeUrlConvertor::GetValidatedUrlShortCode(UrlShortcode);
-
 	if (UrlShortcode.IsEmpty())
 	{
-		(void)OnLoadFailed.ExecuteIfBound("Url invalid");
+		(void)OnLoadFailed.ExecuteIfBound("Url is empty");
 		return;
 	}
 
+	OnAvatarLoadCompleted = OnLoadCompleted;
 	AvatarLoader = NewObject<UReadyPlayerMeAvatarLoader>(this,TEXT("AvatarLoader"));
-	AvatarLoader->LoadAvatar(UrlShortcode, OnAvatarLoadCompleted, OnLoadFailed, bShouldLoadMetadata);
+	AvatarLoader->LoadAvatar(UrlShortcode, AvatarConfig, OnAvatarDownloadCompleted, OnLoadFailed);
 }
 
-void UReadyPlayerMeComponent::LoadNewAvatar(const FString& Url, const FAvatarLoadFailed& OnLoadFailed)
+void UReadyPlayerMeComponent::LoadNewAvatar(const FString& Url, const FAvatarLoadCompleted& OnLoadCompleted, const FAvatarLoadFailed& OnLoadFailed)
 {
 	UrlShortcode = Url;
-	LoadAvatar(OnLoadFailed);
+	LoadAvatar(OnLoadCompleted, OnLoadFailed);
 }
 
-void UReadyPlayerMeComponent::OnAvatarLoaded(UglTFRuntimeAsset* Asset, const FAvatarMetadata& Metadata)
+void UReadyPlayerMeComponent::CancelAvatarLoad()
+{
+	if(IsValid(AvatarLoader))
+	{
+		AvatarLoader->CancelAvatarLoad();
+	}
+}
+
+void UReadyPlayerMeComponent::OnAvatarDownloaded(UglTFRuntimeAsset* Asset, const FAvatarMetadata& Metadata)
 {
 	AvatarMetadata = Metadata;
 	LoadSkeletalMesh(Asset);
@@ -65,6 +70,7 @@ void UReadyPlayerMeComponent::OnSkeletalMeshLoaded(USkeletalMesh* SkeletalMesh)
 {
 	InitSkeletalMeshComponent();
 	SkeletalMeshComponent->SetSkeletalMesh(SkeletalMesh);
+	(void)OnAvatarLoadCompleted.ExecuteIfBound();
 }
 
 void UReadyPlayerMeComponent::InitSkeletalMeshComponent()

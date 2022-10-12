@@ -4,6 +4,7 @@
 
 #include "Developer/DesktopPlatform/Public/IDesktopPlatform.h"
 #include "Developer/DesktopPlatform/Public/DesktopPlatformModule.h"
+#include "glTFRuntimeEditorDelegates.h"
 #include "glTFRuntime/Public/glTFRuntimeFunctionLibrary.h"
 #include "glTFRuntime/Public/glTFRuntimeAssetActor.h"
 #include "IDesktopPlatform.h"
@@ -12,6 +13,7 @@
 #define LOCTEXT_NAMESPACE "FglTFRuntimeEditorModule"
 
 static const FText LoadGLTFText = FText::FromString("Load GLTF Asset from File");
+static const FText LoadGLTFTextFromClipboard = FText::FromString("Load GLTF Asset from Clipboard");
 
 void FglTFRuntimeEditorModule::SpawnglTFRuntimeActor()
 {
@@ -38,26 +40,47 @@ void FglTFRuntimeEditorModule::SpawnglTFRuntimeActor()
 				AglTFRuntimeAssetActor* NewActor = LevelEditorModule.GetFirstLevelEditor()->GetWorld()->SpawnActorDeferred<AglTFRuntimeAssetActor>(AglTFRuntimeAssetActor::StaticClass(), Transform);
 				if (NewActor)
 				{
-					NewActor->SetFlags(EObjectFlags::RF_DuplicateTransient);
 					NewActor->Asset = Asset;
 					NewActor->bAllowSkeletalAnimations = false;
 					NewActor->bAllowNodeAnimations = false;
+					NewActor->StaticMeshConfig.bGenerateStaticMeshDescription = true;
 					NewActor->FinishSpawning(Transform);
 					NewActor->DispatchBeginPlay();
+					GEditor->SelectNone(true, true, true);
+					GEditor->SelectActor(NewActor, true, true, false, true);
 				}
 			}
 		}
 	}
 }
 
+void FglTFRuntimeEditorModule::SpawnglTFRuntimeActorFromClipboard()
+{
+	FglTFRuntimeConfig LoaderConfig;
+	LoaderConfig.bAllowExternalFiles = true;
+	glTFRuntimeEditorDelegates = TStrongObjectPtr<UglTFRuntimeEditorDelegates>(NewObject<UglTFRuntimeEditorDelegates>());
+
+	FglTFRuntimeHttpResponse HttpResponse;
+	HttpResponse.BindUFunction(glTFRuntimeEditorDelegates.Get(), GET_FUNCTION_NAME_CHECKED(UglTFRuntimeEditorDelegates, SpawnFromClipboard));
+
+	FString ClipboardContent;
+
+	if (!UglTFRuntimeFunctionLibrary::glTFLoadAssetFromClipboard(HttpResponse, ClipboardContent, LoaderConfig))
+	{
+		UE_LOG(LogGLTFRuntime, Error, TEXT("Unable to load asset from clipboard"));
+	}
+}
+
 void FglTFRuntimeEditorModule::BuildglTFRuntimeMenu(FMenuBuilder& Builder)
 {
-	Builder.BeginSection("glTFRuntime", FText::FromString("glTFRuntime"));
 #if ENGINE_MAJOR_VERSION > 4
-	Builder.AddMenuEntry(LoadGLTFText, LoadGLTFText, FSlateIcon(FAppStyle::GetAppStyleSetName(), "ClassIcon.Default"), FExecuteAction::CreateRaw(this, &FglTFRuntimeEditorModule::SpawnglTFRuntimeActor));
+	FSlateIcon Icon(FAppStyle::GetAppStyleSetName(), "ClassIcon.Default");
 #else
-	Builder.AddMenuEntry(LoadGLTFText, LoadGLTFText, FSlateIcon(FEditorStyle::GetStyleSetName(), "ClassIcon.Default"), FExecuteAction::CreateRaw(this, &FglTFRuntimeEditorModule::SpawnglTFRuntimeActor));
+	FSlateIcon Icon(FEditorStyle::GetStyleSetName(), "ClassIcon.Default");
 #endif
+	Builder.BeginSection("glTFRuntime", FText::FromString("glTFRuntime"));
+	Builder.AddMenuEntry(LoadGLTFText, LoadGLTFText, Icon, FExecuteAction::CreateRaw(this, &FglTFRuntimeEditorModule::SpawnglTFRuntimeActor));
+	Builder.AddMenuEntry(LoadGLTFTextFromClipboard, LoadGLTFTextFromClipboard, Icon, FExecuteAction::CreateRaw(this, &FglTFRuntimeEditorModule::SpawnglTFRuntimeActorFromClipboard));
 	Builder.EndSection();
 }
 

@@ -3,7 +3,7 @@
 
 #include "ReadyPlayerMeFunctionLibrary.h"
 
-#include "Utils/ReadyPlayerMeAvatarStorage.h"
+#include "Storage/ReadyPlayerMeAvatarStorage.h"
 
 void UReadyPlayerMeFunctionLibrary::ClearAvatarCache()
 {

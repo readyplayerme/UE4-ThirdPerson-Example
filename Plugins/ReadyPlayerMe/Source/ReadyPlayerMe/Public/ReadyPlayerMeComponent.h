@@ -8,7 +8,6 @@
 #include "glTFRuntimeFunctionLibrary.h"
 #include "ReadyPlayerMeComponent.generated.h"
 
-class USkeleton;
 class UglTFRuntimeAsset;
 
 /**
@@ -31,20 +30,22 @@ public:
 	 * Downloads the avatar from the web and generates a skeletal mesh of the avatar.
 	 * If the model was previously downloaded and stored locally, the local model will be used for the loading of the avatar. 
 	 * 
+	 * @param OnLoadCompleted Success callback. Called when the avatar asset is downloaded and the skeletal mesh is set.
 	 * @param OnLoadFailed Failure callback. If the avatar fails to load, the failure callback will be called.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Ready Player Me", meta = (DisplayName = "Load Avatar", AutoCreateRefTerm = "OnLoadFailed"))
-	void LoadAvatar(const FAvatarLoadFailed& OnLoadFailed);
+	UFUNCTION(BlueprintCallable, Category = "Ready Player Me", meta = (DisplayName = "Load Avatar", AutoCreateRefTerm = "OnLoadCompleted,OnLoadFailed"))
+	void LoadAvatar(const FAvatarLoadCompleted& OnLoadCompleted, const FAvatarLoadFailed& OnLoadFailed);
 
 	/**
 	 * Downloads the avatar from the web using the provided url and generates a skeletal mesh of the avatar.
 	 * If the model was previously downloaded and stored locally, the local model will be used for the loading of the avatar. 
 	 * 
 	 * @param Url Avatar url or shortcode.
+	 * @param OnLoadCompleted Success callback. Called when the avatar asset is downloaded and the skeletal mesh is set.
 	 * @param OnLoadFailed Failure callback. If the avatar fails to load, the failure callback will be called.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Ready Player Me", meta = (DisplayName = "Load New Avatar", AutoCreateRefTerm = "OnLoadFailed"))
-	void LoadNewAvatar(const FString& Url, const FAvatarLoadFailed& OnLoadFailed);
+	UFUNCTION(BlueprintCallable, Category = "Ready Player Me", meta = (DisplayName = "Load New Avatar", AutoCreateRefTerm = "OnLoadCompleted,OnLoadFailed"))
+	void LoadNewAvatar(const FString& Url, const FAvatarLoadCompleted& OnLoadCompleted, const FAvatarLoadFailed& OnLoadFailed);
 
 	/**
 	 * Loads the rendered image of the avatar from the server. By setting the SceneType the avatar can be rendered in different scenes.
@@ -60,14 +61,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ready Player Me")
 	FString UrlShortcode;
 
-	/** provides read-only information about the loaded avatar. Such as the type of the avatar, outfit and gender. */
+	/** Provides read-only information about the loaded avatar. Such as the type of the avatar, outfit and gender. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ready Player Me")
 	FAvatarMetadata AvatarMetadata;
 
 	/** It provides a flexibility to chose the skeleton that will be used for the loaded avatar.
 	 * If it's not set the default skeleton will be used for the loaded avatar. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Ready Player Me")
-	USkeleton* TargetSkeleton;
+	class USkeleton* TargetSkeleton;
+
+	/** Avatar configuration asset data. Used to load the avatar with the specific configs.
+	 * If no config is set, the partner specific configs will be used for loading the avatar. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Ready Player Me")
+	class UReadyPlayerMeAvatarConfig* AvatarConfig;
+
+	UFUNCTION(BlueprintCallable, Category = "Ready Player Me", meta = (DisplayName = "Cancel Avatar"))
+	void CancelAvatarLoad();
 
 private:
 	UPROPERTY()
@@ -80,7 +89,7 @@ private:
 	class UReadyPlayerMeRenderLoader* RenderLoader;
 
 	UFUNCTION()
-	void OnAvatarLoaded(UglTFRuntimeAsset* Asset, const FAvatarMetadata& Metadata);
+	void OnAvatarDownloaded(UglTFRuntimeAsset* Asset, const FAvatarMetadata& Metadata);
 
 	UFUNCTION()
 	void OnSkeletalMeshLoaded(USkeletalMesh* SkeletalMesh);
@@ -88,6 +97,8 @@ private:
 	void InitSkeletalMeshComponent();
 
 	void LoadSkeletalMesh(UglTFRuntimeAsset* Asset);
+
+	FAvatarDownloadCompleted OnAvatarDownloadCompleted;
 
 	FAvatarLoadCompleted OnAvatarLoadCompleted;
 

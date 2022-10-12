@@ -41,7 +41,8 @@ public class ReadyPlayerMe : ModuleRules
 				"Json",
 				"JsonUtilities",
 				"HTTP",
-				"UMG"
+				"UMG",
+				"Projects"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "ReadyPlayerMeTypes.h"
+#include "Storage/ReadyPlayerMeAvatarCacheHandler.h"
 #include "glTFRuntimeFunctionLibrary.h"
 #include "Interfaces/IHttpRequest.h"
 #include "ReadyPlayerMeAvatarLoader.generated.h"
@@ -24,17 +25,18 @@ public:
 	/**
 	 * Downloads the avatar asset from the Url and saves it in the local storage.
 	 *
-	 * @param Url Avatar url or shortcode.
-	 * @param OnLoadCompleted Success callback. Called when the avatar asset is loaded.
+	 * @param UrlShortcode Avatar url or shortcode.
+	 * @param AvatarConfig Config for loading avatar with custom configuration.
+	 * @param OnDownloadCompleted Success callback. Called when the avatar asset is downloaded.
 	 * @param OnLoadFailed Failure callback. If the avatar fails to load, the failure callback will be called.
-	 * @param bShouldLoadMetadata Boolean flag for loading the metadata.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Ready Player Me", meta = (DisplayName = "Load Avatar", AutoCreateRefTerm = "OnLoadFailed"))
-	void LoadAvatar(const FString& Url, const FAvatarLoadCompleted& OnLoadCompleted, const FAvatarLoadFailed& OnLoadFailed, bool bShouldLoadMetadata = true);
+	void LoadAvatar(const FString& UrlShortcode, class UReadyPlayerMeAvatarConfig* AvatarConfig, const FAvatarDownloadCompleted& OnDownloadCompleted, const FAvatarLoadFailed& OnLoadFailed);
+
+	UFUNCTION(BlueprintCallable, Category = "Ready Player Me", meta = (DisplayName = "Cancel Avatar Load"))
+	void CancelAvatarLoad();
 
 private:
-	static bool IsCachingEnabled();
-
 	void OnMetadataReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess);
 	
 	void OnAvatarModelReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess);
@@ -43,19 +45,15 @@ private:
 	
 	void LoadAvatarModel();
 
-	bool IsMetadataChanged() const;
-
 	void ProcessReceivedMetadata(const FString& ResponseContent);
-
-	void SaveMetadata(const FString& ResponseContent);
 
 	void ExecuteSuccessCallback();
 
 	void ExecuteFailureCallback(const FString& ErrorMessage);
 	
-	void LoadMetadataAndModel(bool bShouldLoadMetadata);
-	
 	void Reset();
+
+	virtual void BeginDestroy() override;
 
 	UPROPERTY()
 	UglTFRuntimeAsset* GlTFRuntimeAsset;
@@ -63,9 +61,18 @@ private:
 	TOptional<FAvatarMetadata> AvatarMetadata;
 	TOptional<FAvatarUri> AvatarUri;
 
-	FAvatarLoadCompleted OnAvatarLoadCompleted;
+	TUniquePtr<FReadyPlayerMeAvatarCacheHandler> CacheHandler;
+
+	FAvatarDownloadCompleted OnAvatarDownloadCompleted;
 	FAvatarLoadFailed OnAvatarLoadFailed;
 
 	bool bIsTryingToUpdate;
 
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 25
+	TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> AvatarMetadataRequest;
+	TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> AvatarModelRequest;
+#else
+	TSharedPtr<IHttpRequest> AvatarMetadataRequest;
+	TSharedPtr<IHttpRequest> AvatarModelRequest;
+#endif
 };
